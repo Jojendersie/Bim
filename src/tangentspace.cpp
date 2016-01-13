@@ -1,9 +1,9 @@
-#include "bim.hpp"
+#include "chunk.hpp"
 
-void BinaryModel::computeTangentSpace()
+void Chunk::computeTangentSpace()
 {
 }
 
-void BinaryModel::unifyQormals()
+void Chunk::unifyQormals()
 {
 }

@@ -1,17 +1,30 @@
 #include "bim.hpp"
 
-BinaryModel::BinaryModel()
+BinaryModel::BinaryModel(Property::Val _properties) :
+	m_numChunks(1),
+	m_dimScale(1),
+	m_chunkStates(ChunkState::LOADED)	// Chunk exists, but is empty (no mesh data)
+	m_chunks(1),
+	m_requestedProps(_properties),
+	m_loadedProps(_properties),
+	m_boundingBox()
 {
 }
 
-bool BinaryModel::validatePropertyDescriptors(PropDesc* _properties, int _num)
+/*bool BinaryModel::validatePropertyDescriptors(PropDesc* _properties, int _num)
 {
-}
-	
-void BinaryModel::appendVertex(PropDesc* _properties, int _num)
-{
-}
-	
-void BinaryModel::addTriangle(const ei::IVec3& _indices, int _material)
+	Property provided = 0;
+	for(int i = 0; i < _num; ++i)
+		provided |= _properties[i].property;
+	// Must contain all required
+	if(provided & m_requestedProps != m_requestedProps)
+		return false;
+	// Should not contain more than loaded
+	if(provided & m_loadedProps != provided)
+		return false;
+	return true;
+}*/
+
+void BinaryModel::split(const ei::IVec3& _numChunks)
 {
 }

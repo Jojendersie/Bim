@@ -1,9 +1,13 @@
 #include "chunk.hpp"
 
-void Chunk::computeTangentSpace()
-{
-}
+namespace bim {
 
-void Chunk::unifyQormals()
-{
-}
+	void Chunk::computeTangentSpace()
+	{
+	}
+
+	void Chunk::unifyQormals()
+	{
+	}
+
+} // namespace bim

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ei/vector.hpp>
 #include <vector>
 
 namespace bim {

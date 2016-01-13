@@ -62,13 +62,13 @@ namespace bim {
 		{
 			if(_properties->color)
 				m_colors.push_back(*_properties->color);
-			else m_colors.push_back(ei::Vec2(0.0f));
+			else m_colors.push_back(0);
 		}
 	}
 		
-	void Chunk::addTriangle(const ei::IVec3& _indices, int _material)
+	void Chunk::addTriangle(const ei::UVec3& _indices, uint _material)
 	{
-		m_triangles.push_back(ei::IVec4(_indices, _material));
+		m_triangles.push_back(ei::UVec4(_indices, _material));
 	}
 
 } // namespace bim

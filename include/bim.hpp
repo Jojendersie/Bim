@@ -1,6 +1,8 @@
 #pragma once
 
 #include "chunk.hpp"
+#include <fstream>
+#include <ei/3dtypes.hpp>
 
 namespace bim {
 

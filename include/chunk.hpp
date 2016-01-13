@@ -42,18 +42,32 @@ namespace bim {
 	class Chunk
 	{
 	public:
-		ei::Vec3* getPositions();
-		const ei::Vec3* getPositions() const;
-		ei::Vec3* getNormals();
-		const ei::Vec3* getNormals() const;
-		ei::Quaternion* getQormals();
-		const ei::Quaternion* getQormals() const;
+		ei::Vec3* getPositions()					{ return m_positions.empty() ? nullptr : m_positions.data(); }
+		const ei::Vec3* getPositions() const		{ return m_positions.empty() ? nullptr : m_positions.data(); }
+		ei::Vec3* getNormals()						{ return m_normals.empty() ? nullptr : m_normals.data(); }
+		const ei::Vec3* getNormals() const			{ return m_normals.empty() ? nullptr : m_normals.data(); }
+		ei::Vec3* getTangents()						{ return m_tangents.empty() ? nullptr : m_tangents.data(); }
+		const ei::Vec3* getTangents() const			{ return m_tangents.empty() ? nullptr : m_tangents.data(); }
+		ei::Vec3* getBitangents()					{ return m_bitangents.empty() ? nullptr : m_bitangents.data(); }
+		const ei::Vec3* getBitangents() const		{ return m_bitangents.empty() ? nullptr : m_bitangents.data(); }
+		ei::Quaternion* getQormals()				{ return m_qormals.empty() ? nullptr : m_qormals.data(); }
+		const ei::Quaternion* getQormals() const	{ return m_qormals.empty() ? nullptr : m_qormals.data(); }
+		ei::Vec2* getTexCoords0()					{ return m_texCoords0.empty() ? nullptr : m_texCoords0.data(); }
+		const ei::Vec2* getTexCoords0() const		{ return m_texCoords0.empty() ? nullptr : m_texCoords0.data(); }
+		ei::Vec2* getTexCoords1()					{ return m_texCoords1.empty() ? nullptr : m_texCoords1.data(); }
+		const ei::Vec2* getTexCoords1() const		{ return m_texCoords1.empty() ? nullptr : m_texCoords1.data(); }
+		ei::Vec2* getTexCoords2()					{ return m_texCoords2.empty() ? nullptr : m_texCoords2.data(); }
+		const ei::Vec2* getTexCoords2() const		{ return m_texCoords2.empty() ? nullptr : m_texCoords2.data(); }
+		ei::Vec2* getTexCoords3()					{ return m_texCoords3.empty() ? nullptr : m_texCoords3.data(); }
+		const ei::Vec2* getTexCoords3() const		{ return m_texCoords3.empty() ? nullptr : m_texCoords3.data(); }
+		uint32* getColors()							{ return m_colors.empty() ? nullptr : m_colors.data(); }
+		const uint32* getColors() const				{ return m_colors.empty() ? nullptr : m_colors.data(); }
 
-		ei::UVec4* getTriangles();
-		const ei::UVec4* getTriangles() const;
+		ei::UVec4* getTriangles()					{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
+		const ei::UVec4* getTriangles() const		{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
 
-		Node* getHierarchy();
-		const Node* getHierarchy() const;
+		Node* getHierarchy()						{ return m_hasValidHierarchy ? m_hierarchy.data() : nullptr; }
+		const Node* getHierarchy() const			{ return m_hasValidHierarchy ? m_hierarchy.data() : nullptr; }
 		
 		struct VertexPropertyMap
 		{
@@ -113,7 +127,8 @@ namespace bim {
 		std::vector<ei::Vec2> m_texCoords3;
 		std::vector<ei::uint32> m_colors;
 		std::vector<ei::UVec4> m_triangles;
-		bool m_hasValidHierarchy;
+		std::vector<Node> m_hierarchy;
+		bool m_hasValidHierarchy;	// Hierarchy is invalidated on some edit functions
 		
 		/// Flip qormals to align them within each triangle.
 		void unifyQormals();

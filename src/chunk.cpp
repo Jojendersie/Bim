@@ -66,7 +66,7 @@ namespace bim {
 		}
 	}
 		
-	void Chunk::addTriangle(const ei::UVec3& _indices, uint _material)
+	void Chunk::addTriangle(const ei::UVec3& _indices, uint32 _material)
 	{
 		m_triangles.push_back(ei::UVec4(_indices, _material));
 	}

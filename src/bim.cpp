@@ -11,6 +11,7 @@ namespace bim {
 		m_loadedProps(_properties),
 		m_boundingBox()
 	{
+		m_chunks[0].m_properties = _properties;
 	}
 
 	/*bool BinaryModel::validatePropertyDescriptors(PropDesc* _properties, int _num)

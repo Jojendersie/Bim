@@ -42,6 +42,8 @@ namespace bim {
 	class Chunk
 	{
 	public:
+		Chunk();
+
 		ei::Vec3* getPositions()					{ return m_positions.empty() ? nullptr : m_positions.data(); }
 		const ei::Vec3* getPositions() const		{ return m_positions.empty() ? nullptr : m_positions.data(); }
 		ei::Vec3* getNormals()						{ return m_normals.empty() ? nullptr : m_normals.data(); }
@@ -101,7 +103,7 @@ namespace bim {
 		///		...
 		///		chunk.addTriangle(UVec3(...), matID);
 		///	}
-		void addVertex(VertexPropertyMap* _properties);
+		void addVertex(const VertexPropertyMap& _properties);
 		
 		void addTriangle(const ei::UVec3& _indices, uint32 _material);
 		

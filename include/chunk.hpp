@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ei/vector.hpp>
+#include <ei/3dtypes.hpp>
 #include <vector>
 
 namespace bim {
@@ -91,7 +91,7 @@ namespace bim {
 			
 			VertexPropertyMap() { memset(this, 0, sizeof(VertexPropertyMap)); }
 		};
-		
+
 		/// Add the data for an entire vertex. A vertex should contain the same set
 		///	of properties as given on load/construction. All other properties are
 		/// filled with defaults.
@@ -118,11 +118,12 @@ namespace bim {
 		/// Recomputes normals, ... dependent on which of the properties are used
 		///	in the current model.
 		void computeTangentSpace();
-		
+
 		void rebuildHierarchy(/*Build options*/);
 	private: friend class BinaryModel;
 		uint64 m_address;
 		Property::Val m_properties;
+		ei::Box m_boundingBox;
 		std::vector<ei::Vec3> m_positions;
 		std::vector<ei::Vec3> m_normals;
 		std::vector<ei::Vec3> m_tangents;

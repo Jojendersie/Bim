@@ -85,6 +85,7 @@ namespace bim {
 		file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 	
 		MetaSection meta;
+		refreshBoundingBox();
 		meta.propertyMask = m_loadedProps;
 		meta.numChunks = m_numChunks;
 		meta.boundingBox = m_boundingBox;
@@ -182,7 +183,11 @@ namespace bim {
 
 	void BinaryModel::realeaseChunk(const ei::IVec3& _chunk)
 	{
-		m_chunkStates[dot(m_dimScale, _chunk)] = ChunkState::RELEASE_REQUEST;
+		int idx = dot(m_dimScale, _chunk);
+		// Make sure the bounding box invariant holds (all unloaded chunks
+		// are proper represented).
+		m_boundingBox = ei::Box(m_boundingBox, m_chunks[idx].m_boundingBox);
+		m_chunkStates[idx] = ChunkState::RELEASE_REQUEST;
 	}
 
 

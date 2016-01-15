@@ -28,6 +28,15 @@ namespace bim {
 		return true;
 	}*/
 
+	void BinaryModel::refreshBoundingBox()
+	{
+		// Invariant: The bounding always represents all unloaded chunks.
+		// If something changed it is only in the resident blocks.
+		for(size_t i = 0; i < m_chunks.size(); ++i)
+			if(m_chunkStates[i] == ChunkState::LOADED)
+				m_boundingBox = ei::Box(m_boundingBox, m_chunks[i].m_boundingBox);
+	}
+
 	void BinaryModel::split(const ei::IVec3& _numChunks)
 	{
 	}

@@ -48,6 +48,9 @@ namespace bim {
 		/// Mark a chunk as unused. It might get deleted if memory is required.
 		void realeaseChunk(const ei::IVec3& _chunkPos);
 
+		/// When editing the model bounding box is not always up to date. Make sure it is.
+		void refreshBoundingBox();
+
 		/// Helper structure to define inputs for appendVertex().
 		/*struct PropDesc
 		{

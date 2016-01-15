@@ -10,9 +10,15 @@ namespace bim {
 
 	void Chunk::addVertex(const VertexPropertyMap& _properties)
 	{
-		if(_properties.position)
+		if(_properties.position) {
+			if(m_positions.empty())
+				m_boundingBox.min = m_boundingBox.max = *_properties.position;
+			else {
+				m_boundingBox.min = min(*_properties.position, m_boundingBox.min);
+				m_boundingBox.max = max(*_properties.position, m_boundingBox.max);
+			}
 			m_positions.push_back(*_properties.position);
-		else m_positions.push_back(ei::Vec3(0.0f));
+		} else m_positions.push_back(ei::Vec3(0.0f));
 		if(m_properties & Property::NORMAL)
 		{
 			if(_properties.normal)

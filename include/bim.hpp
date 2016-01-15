@@ -21,13 +21,13 @@ namespace bim {
 		/// To truly load the data call makeChunkResident() for the portions you need.
 		/// \param [in] _bimFile Name of the binary file containing the scene graph
 		///		and mesh information.
-		/// \param [in] _matFile A JSON file with material information.
+		/// \param [in] _envFile A JSON file with material and lighting information.
 		///	\param [in] _loadAll Also load properties which are not requested.
 		/// \return true on success.
-		bool load(const char* _bimFile, const char* _matFile, Property::Val _requiredProperties, bool _loadAll = false);
+		bool load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, bool _loadAll = false);
 		
 		/// Stores global information like material but without chunks.
-		void store(const char* _bimFile, const char* _matFile);
+		void store(const char* _bimFile, const char* _envFile);
 		/// Appends a chunk to the file (expecting the other information already exist).
 		void storeChunk(const char* _bimFile, const ei::IVec3& _chunkPos);
 		
@@ -75,3 +75,5 @@ namespace bim {
 	};
 
 }
+
+#include "exporter.hpp"

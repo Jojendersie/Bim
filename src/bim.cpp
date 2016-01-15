@@ -7,11 +7,11 @@ namespace bim {
 		m_dimScale(1),
 		m_chunkStates(1, ChunkState::LOADED),	// Chunk exists, but is empty (no mesh data)
 		m_chunks(1),
-		m_requestedProps(Property::Val(_properties | Property::POSITION)),
-		m_loadedProps(Property::Val(_properties | Property::POSITION)),
+		m_requestedProps(Property::Val(_properties | Property::POSITION | Property::TRIANGLE_IDX)),
+		m_loadedProps(Property::Val(_properties | Property::POSITION | Property::TRIANGLE_IDX)),
 		m_boundingBox()
 	{
-		m_chunks[0].m_properties = Property::Val(_properties | Property::POSITION);
+		m_chunks[0].m_properties = m_loadedProps;
 	}
 
 	/*bool BinaryModel::validatePropertyDescriptors(PropDesc* _properties, int _num)

@@ -153,6 +153,14 @@ namespace bim {
 							swap(m_chunks[idx].m_colors, std::vector<uint32>(header.size / sizeof(uint32)));
 							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_colors.data()), header.size);
 							break;
+						case Property::TRIANGLE_IDX:
+							swap(m_chunks[idx].m_triangles, std::vector<ei::UVec3>(header.size / sizeof(ei::UVec3)));
+							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_triangles.data()), header.size);
+							break;
+						case Property::TRIANGLE_MAT:
+							swap(m_chunks[idx].m_triangleMaterials, std::vector<uint32>(header.size / sizeof(uint32)));
+							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_triangleMaterials.data()), header.size);
+							break;
 						default: m_file.seekg(header.size, std::ios_base::cur);
 					}
 				} else m_file.seekg(header.size, std::ios_base::cur);
@@ -188,17 +196,31 @@ namespace bim {
 		SectionHeader header;
 		header.type = CHUNK_SECTION;
 		header.size = m_chunks[idx].m_positions.size() * sizeof(ei::Vec3) +
-					  m_chunks[idx].m_normals.size() * sizeof(ei::Vec3) +
-					  m_chunks[idx].m_tangents.size() * sizeof(ei::Vec3) +
-					  m_chunks[idx].m_bitangents.size() * sizeof(ei::Vec3) +
-					  m_chunks[idx].m_qormals.size() * sizeof(ei::Quaternion) +
-					  m_chunks[idx].m_texCoords0.size() * sizeof(ei::Vec2) +
-					  m_chunks[idx].m_texCoords1.size() * sizeof(ei::Vec2) +
-					  m_chunks[idx].m_texCoords2.size() * sizeof(ei::Vec2) +
-					  m_chunks[idx].m_texCoords3.size() * sizeof(ei::Vec2) +
-					  m_chunks[idx].m_colors.size() * sizeof(uint32);
+					  m_chunks[idx].m_triangles.size() * sizeof(ei::UVec3) +
+					  sizeof(SectionHeader) * 2;
+		if(m_loadedProps & Property::NORMAL)
+			header.size += m_chunks[idx].m_normals.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
+		if(m_loadedProps & Property::TANGENT)
+			header.size += m_chunks[idx].m_tangents.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
+		if(m_loadedProps & Property::BITANGENT)
+			header.size += m_chunks[idx].m_bitangents.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
+		if(m_loadedProps & Property::QORMAL)
+			header.size += m_chunks[idx].m_qormals.size() * sizeof(ei::Quaternion) + sizeof(SectionHeader);
+		if(m_loadedProps & Property::TEXCOORD0)
+			header.size += m_chunks[idx].m_texCoords0.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
+		if(m_loadedProps & Property::TEXCOORD1)
+			header.size += m_chunks[idx].m_texCoords1.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
+		if(m_loadedProps & Property::TEXCOORD2)
+			header.size += m_chunks[idx].m_texCoords2.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
+		if(m_loadedProps & Property::TEXCOORD3)
+			header.size += m_chunks[idx].m_texCoords3.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
+		if(m_loadedProps & Property::COLOR)
+			header.size += m_chunks[idx].m_colors.size() * sizeof(uint32) + sizeof(SectionHeader);
+		if(m_loadedProps & Property::TRIANGLE_MAT)
+			header.size += m_chunks[idx].m_triangleMaterials.size() * sizeof(uint32) + sizeof(SectionHeader);
 		file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 	
+		// Vertex stuff
 		header.type = Property::POSITION;
 		header.size = m_chunks[idx].m_positions.size() * sizeof(ei::Vec3);
 		file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
@@ -211,7 +233,6 @@ namespace bim {
 			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			file.write(reinterpret_cast<char*>(m_chunks[idx].m_normals.data()), header.size);
 		}
-
 		if(m_loadedProps & Property::TANGENT)
 		{
 			header.type = Property::TANGENT;
@@ -219,7 +240,6 @@ namespace bim {
 			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			file.write(reinterpret_cast<char*>(m_chunks[idx].m_tangents.data()), header.size);
 		}
-
 		if(m_loadedProps & Property::BITANGENT)
 		{
 			header.type = Property::BITANGENT;
@@ -227,7 +247,6 @@ namespace bim {
 			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			file.write(reinterpret_cast<char*>(m_chunks[idx].m_bitangents.data()), header.size);
 		}
-
 		if(m_loadedProps & Property::QORMAL)
 		{
 			header.type = Property::QORMAL;
@@ -235,7 +254,6 @@ namespace bim {
 			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			file.write(reinterpret_cast<char*>(m_chunks[idx].m_qormals.data()), header.size);
 		}
-
 		if(m_loadedProps & Property::TEXCOORD0)
 		{
 			header.type = Property::TEXCOORD0;
@@ -243,7 +261,6 @@ namespace bim {
 			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			file.write(reinterpret_cast<char*>(m_chunks[idx].m_texCoords0.data()), header.size);
 		}
-
 		if(m_loadedProps & Property::TEXCOORD1)
 		{
 			header.type = Property::TEXCOORD1;
@@ -251,7 +268,6 @@ namespace bim {
 			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			file.write(reinterpret_cast<char*>(m_chunks[idx].m_texCoords1.data()), header.size);
 		}
-
 		if(m_loadedProps & Property::TEXCOORD2)
 		{
 			header.type = Property::TEXCOORD2;
@@ -259,7 +275,6 @@ namespace bim {
 			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			file.write(reinterpret_cast<char*>(m_chunks[idx].m_texCoords2.data()), header.size);
 		}
-
 		if(m_loadedProps & Property::TEXCOORD3)
 		{
 			header.type = Property::TEXCOORD3;
@@ -267,13 +282,26 @@ namespace bim {
 			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			file.write(reinterpret_cast<char*>(m_chunks[idx].m_texCoords3.data()), header.size);
 		}
-
 		if(m_loadedProps & Property::COLOR)
 		{
 			header.type = Property::COLOR;
 			header.size = m_chunks[idx].m_colors.size() * sizeof(ei::Vec2);
 			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			file.write(reinterpret_cast<char*>(m_chunks[idx].m_colors.data()), header.size);
+		}
+
+		// Triangle stuff
+		header.type = Property::TRIANGLE_IDX;
+		header.size = m_chunks[idx].m_triangles.size() * sizeof(ei::UVec3);
+		file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+		file.write(reinterpret_cast<char*>(m_chunks[idx].m_triangles.data()), header.size);
+
+		if(m_loadedProps & Property::TRIANGLE_MAT)
+		{
+			header.type = Property::TRIANGLE_MAT;
+			header.size = m_chunks[idx].m_triangleMaterials.size() * sizeof(uint32);
+			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+			file.write(reinterpret_cast<char*>(m_chunks[idx].m_triangleMaterials.data()), header.size);
 		}
 	}
 

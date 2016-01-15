@@ -22,7 +22,8 @@ namespace bim {
 			COLOR			= 0x00000200,
 			
 			// Triangle Properties:
-			TRIANGLE_MAT	= 0x00010000,	///< Four indices (3 to vertices, one to the material)
+			TRIANGLE_IDX	= 0x00010000,	///< The three indices of vertices
+			TRIANGLE_MAT	= 0x00020000,	///< One index for the material
 			
 			// Hierarchy Properties:
 			AABOX_BVH		= 0x10000000,
@@ -67,8 +68,10 @@ namespace bim {
 		const uint32* getColors() const				{ return m_colors.empty() ? nullptr : m_colors.data(); }
 
 		uint getNumTriangles() const				{ return (uint)m_triangles.size(); }
-		ei::UVec4* getTriangles()					{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
-		const ei::UVec4* getTriangles() const		{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
+		ei::UVec3* getTriangles()					{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
+		const ei::UVec3* getTriangles() const		{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
+		uint32* getTriangleMaterials()				{ return m_triangleMaterials.empty() ? nullptr : m_triangleMaterials.data(); }
+		const uint32* getTriangleMaterials() const	{ return m_triangleMaterials.empty() ? nullptr : m_triangleMaterials.data(); }
 
 		Node* getHierarchy()						{ return m_hasValidHierarchy ? m_hierarchy.data() : nullptr; }
 		const Node* getHierarchy() const			{ return m_hasValidHierarchy ? m_hierarchy.data() : nullptr; }
@@ -130,7 +133,8 @@ namespace bim {
 		std::vector<ei::Vec2> m_texCoords2;
 		std::vector<ei::Vec2> m_texCoords3;
 		std::vector<ei::uint32> m_colors;
-		std::vector<ei::UVec4> m_triangles;
+		std::vector<ei::UVec3> m_triangles;
+		std::vector<uint32> m_triangleMaterials;
 		std::vector<Node> m_hierarchy;
 		bool m_hasValidHierarchy;	// Hierarchy is invalidated on some edit functions
 		

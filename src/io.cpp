@@ -121,6 +121,38 @@ namespace bim {
 							swap(m_chunks[idx].m_normals, std::vector<ei::Vec3>(header.size / sizeof(ei::Vec3)));
 							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_normals.data()), header.size);
 							break;
+						case Property::TANGENT:
+							swap(m_chunks[idx].m_tangents, std::vector<ei::Vec3>(header.size / sizeof(ei::Vec3)));
+							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_tangents.data()), header.size);
+							break;
+						case Property::BITANGENT:
+							swap(m_chunks[idx].m_bitangents, std::vector<ei::Vec3>(header.size / sizeof(ei::Vec3)));
+							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_bitangents.data()), header.size);
+							break;
+						case Property::QORMAL:
+							swap(m_chunks[idx].m_qormals, std::vector<ei::Quaternion>(header.size / sizeof(ei::Quaternion)));
+							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_qormals.data()), header.size);
+							break;
+						case Property::TEXCOORD0:
+							swap(m_chunks[idx].m_texCoords0, std::vector<ei::Vec2>(header.size / sizeof(ei::Vec2)));
+							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_texCoords0.data()), header.size);
+							break;
+						case Property::TEXCOORD1:
+							swap(m_chunks[idx].m_texCoords1, std::vector<ei::Vec2>(header.size / sizeof(ei::Vec2)));
+							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_texCoords1.data()), header.size);
+							break;
+						case Property::TEXCOORD2:
+							swap(m_chunks[idx].m_texCoords2, std::vector<ei::Vec2>(header.size / sizeof(ei::Vec2)));
+							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_texCoords2.data()), header.size);
+							break;
+						case Property::TEXCOORD3:
+							swap(m_chunks[idx].m_texCoords3, std::vector<ei::Vec2>(header.size / sizeof(ei::Vec2)));
+							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_texCoords3.data()), header.size);
+							break;
+						case Property::COLOR:
+							swap(m_chunks[idx].m_colors, std::vector<uint32>(header.size / sizeof(uint32)));
+							m_file.read(reinterpret_cast<char*>(m_chunks[idx].m_colors.data()), header.size);
+							break;
 						default: m_file.seekg(header.size, std::ios_base::cur);
 					}
 				} else m_file.seekg(header.size, std::ios_base::cur);
@@ -156,7 +188,15 @@ namespace bim {
 		SectionHeader header;
 		header.type = CHUNK_SECTION;
 		header.size = m_chunks[idx].m_positions.size() * sizeof(ei::Vec3) +
-					  m_chunks[idx].m_normals.size() * sizeof(ei::Vec3);
+					  m_chunks[idx].m_normals.size() * sizeof(ei::Vec3) +
+					  m_chunks[idx].m_tangents.size() * sizeof(ei::Vec3) +
+					  m_chunks[idx].m_bitangents.size() * sizeof(ei::Vec3) +
+					  m_chunks[idx].m_qormals.size() * sizeof(ei::Quaternion) +
+					  m_chunks[idx].m_texCoords0.size() * sizeof(ei::Vec2) +
+					  m_chunks[idx].m_texCoords1.size() * sizeof(ei::Vec2) +
+					  m_chunks[idx].m_texCoords2.size() * sizeof(ei::Vec2) +
+					  m_chunks[idx].m_texCoords3.size() * sizeof(ei::Vec2) +
+					  m_chunks[idx].m_colors.size() * sizeof(uint32);
 		file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 	
 		header.type = Property::POSITION;
@@ -170,6 +210,70 @@ namespace bim {
 			header.size = m_chunks[idx].m_normals.size() * sizeof(ei::Vec3);
 			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			file.write(reinterpret_cast<char*>(m_chunks[idx].m_normals.data()), header.size);
+		}
+
+		if(m_loadedProps & Property::TANGENT)
+		{
+			header.type = Property::TANGENT;
+			header.size = m_chunks[idx].m_tangents.size() * sizeof(ei::Vec3);
+			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+			file.write(reinterpret_cast<char*>(m_chunks[idx].m_tangents.data()), header.size);
+		}
+
+		if(m_loadedProps & Property::BITANGENT)
+		{
+			header.type = Property::BITANGENT;
+			header.size = m_chunks[idx].m_bitangents.size() * sizeof(ei::Vec3);
+			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+			file.write(reinterpret_cast<char*>(m_chunks[idx].m_bitangents.data()), header.size);
+		}
+
+		if(m_loadedProps & Property::QORMAL)
+		{
+			header.type = Property::QORMAL;
+			header.size = m_chunks[idx].m_qormals.size() * sizeof(ei::Quaternion);
+			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+			file.write(reinterpret_cast<char*>(m_chunks[idx].m_qormals.data()), header.size);
+		}
+
+		if(m_loadedProps & Property::TEXCOORD0)
+		{
+			header.type = Property::TEXCOORD0;
+			header.size = m_chunks[idx].m_texCoords0.size() * sizeof(ei::Vec2);
+			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+			file.write(reinterpret_cast<char*>(m_chunks[idx].m_texCoords0.data()), header.size);
+		}
+
+		if(m_loadedProps & Property::TEXCOORD1)
+		{
+			header.type = Property::TEXCOORD1;
+			header.size = m_chunks[idx].m_texCoords1.size() * sizeof(ei::Vec2);
+			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+			file.write(reinterpret_cast<char*>(m_chunks[idx].m_texCoords1.data()), header.size);
+		}
+
+		if(m_loadedProps & Property::TEXCOORD2)
+		{
+			header.type = Property::TEXCOORD2;
+			header.size = m_chunks[idx].m_texCoords2.size() * sizeof(ei::Vec2);
+			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+			file.write(reinterpret_cast<char*>(m_chunks[idx].m_texCoords2.data()), header.size);
+		}
+
+		if(m_loadedProps & Property::TEXCOORD3)
+		{
+			header.type = Property::TEXCOORD3;
+			header.size = m_chunks[idx].m_texCoords3.size() * sizeof(ei::Vec2);
+			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+			file.write(reinterpret_cast<char*>(m_chunks[idx].m_texCoords3.data()), header.size);
+		}
+
+		if(m_loadedProps & Property::COLOR)
+		{
+			header.type = Property::COLOR;
+			header.size = m_chunks[idx].m_colors.size() * sizeof(ei::Vec2);
+			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+			file.write(reinterpret_cast<char*>(m_chunks[idx].m_colors.data()), header.size);
 		}
 	}
 

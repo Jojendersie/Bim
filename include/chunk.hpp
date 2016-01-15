@@ -44,6 +44,7 @@ namespace bim {
 	public:
 		Chunk();
 
+		uint getNumVertices() const					{ return (uint)m_positions.size(); }
 		ei::Vec3* getPositions()					{ return m_positions.empty() ? nullptr : m_positions.data(); }
 		const ei::Vec3* getPositions() const		{ return m_positions.empty() ? nullptr : m_positions.data(); }
 		ei::Vec3* getNormals()						{ return m_normals.empty() ? nullptr : m_normals.data(); }
@@ -65,6 +66,7 @@ namespace bim {
 		uint32* getColors()							{ return m_colors.empty() ? nullptr : m_colors.data(); }
 		const uint32* getColors() const				{ return m_colors.empty() ? nullptr : m_colors.data(); }
 
+		uint getNumTriangles() const				{ return (uint)m_triangles.size(); }
 		ei::UVec4* getTriangles()					{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
 		const ei::UVec4* getTriangles() const		{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
 

@@ -68,9 +68,9 @@ namespace bim {
 
 		// Discard all the undesired properties for size reasons.
 		if(!(m_properties & Property::NORMAL)) swap(m_normals, std::vector<Vec3>());
-		if(!(m_properties & Property::TANGENT)) swap(m_normals, std::vector<Vec3>());
-		if(!(m_properties & Property::BITANGENT)) swap(m_normals, std::vector<Vec3>());
-		if(!(m_properties & Property::QORMAL)) swap(m_normals, std::vector<Vec3>());
+		if(!(m_properties & Property::TANGENT)) swap(m_tangents, std::vector<Vec3>());
+		if(!(m_properties & Property::BITANGENT)) swap(m_bitangents, std::vector<Vec3>());
+		if(!(m_properties & Property::QORMAL)) swap(m_qormals, std::vector<Quaternion>());
 	}
 
 	void Chunk::unifyQormals()

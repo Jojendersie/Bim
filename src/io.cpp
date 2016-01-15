@@ -20,7 +20,7 @@ namespace bim {
 		ei::Box boundingBox;	// Entire scene bounding box
 	};
 
-	bool BinaryModel::load(const char* _bimFile, const char* _matFile, Property::Val _requiredProperties, bool _loadAll)
+	bool BinaryModel::load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, bool _loadAll)
 	{
 		m_file.open(_bimFile, std::ios_base::binary);
 		if(m_file.fail()) {
@@ -74,7 +74,7 @@ namespace bim {
 		return true;
 	}
 
-	void BinaryModel::store(const char* _bimFile, const char* _matFile)
+	void BinaryModel::store(const char* _bimFile, const char* _envFile)
 	{
 		std::ofstream file(_bimFile, std::ios_base::binary);
 		if(m_file.fail()) {std::cerr << "Cannot open file for writing!\n"; return;}
@@ -159,13 +159,11 @@ namespace bim {
 					  m_chunks[idx].m_normals.size() * sizeof(ei::Vec3);
 		file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 	
-		if(m_loadedProps & Property::POSITION)
-		{
-			header.type = Property::POSITION;
-			header.size = m_chunks[idx].m_positions.size() * sizeof(ei::Vec3);
-			file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
-			file.write(reinterpret_cast<char*>(m_chunks[idx].m_positions.data()), header.size);
-		}
+		header.type = Property::POSITION;
+		header.size = m_chunks[idx].m_positions.size() * sizeof(ei::Vec3);
+		file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+		file.write(reinterpret_cast<char*>(m_chunks[idx].m_positions.data()), header.size);
+
 		if(m_loadedProps & Property::NORMAL)
 		{
 			header.type = Property::NORMAL;

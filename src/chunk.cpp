@@ -10,12 +10,9 @@ namespace bim {
 
 	void Chunk::addVertex(const VertexPropertyMap& _properties)
 	{
-		if(m_properties & Property::POSITION)
-		{
-			if(_properties.position)
-				m_positions.push_back(*_properties.position);
-			else m_positions.push_back(ei::Vec3(0.0f));
-		}
+		if(_properties.position)
+			m_positions.push_back(*_properties.position);
+		else m_positions.push_back(ei::Vec3(0.0f));
 		if(m_properties & Property::NORMAL)
 		{
 			if(_properties.normal)

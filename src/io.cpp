@@ -323,7 +323,30 @@ namespace bim {
 		// Iterate through all materials
 		json.child(currentVal, currentVal);
 		do {
-			std::cout << currentVal.getName() << '\n';
+			Material mat;
+			mat.m_name = currentVal.getName();
+			Json::Value matProp;
+			json.child(currentVal, matProp);
+			// A material contains a list of strings or float (arrays).
+			do {
+				if(matProp.getType() == Json::ValueType::STRING)
+					mat.m_textureNames.emplace(matProp.getName(), matProp.getString());
+				else if(matProp.getType() == Json::ValueType::ARRAY)
+				{
+					// Assume a float vector
+					ei::Vec4 value(0.0f);
+					Json::Value v; json.child(matProp, v);
+					value[0] = v.getFloat();
+					if(json.next(v, v)) value[1] = v.getFloat();
+					if(json.next(v, v)) value[2] = v.getFloat();
+					if(json.next(v, v)) value[3] = v.getFloat();
+					mat.m_values.emplace(matProp.getName(), value);
+				} else if(matProp.getType() == Json::ValueType::FLOAT)
+					mat.m_values.emplace(matProp.getName(), ei::Vec4(matProp.getFloat(), 0.0f, 0.0f, 0.0f));
+				else if(matProp.getType() == Json::ValueType::INT)
+					mat.m_values.emplace(matProp.getName(), ei::Vec4((float)matProp.getInt(), 0.0f, 0.0f, 0.0f));
+			} while(json.next(matProp, matProp));
+			m_materials.push_back(mat);
 		} while(json.next(currentVal, currentVal));
 		return true;
 	}

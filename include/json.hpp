@@ -16,16 +16,22 @@ class Json
 
 	struct Value
 	{
-		~Value();
 		ValueType getType() const { return type; }
 		const char* getName() const { return name; }
+
+		// Not type safe!
+		// Be sure the type is appropriate before calling one of the following.
+		const char* getString() const { return _string; }
+		float getFloat() const { return _float; }
+		int getInt() const { return _int; }
+		bool getBool() const { return _bool; }
 	private:
 		friend class Json;
 		ValueType type;
 		const char* name;
 		unsigned offset;	// Offset in the input stream
 		union {
-			char* _string;
+			const char* _string;
 			float _float;
 			int _int;
 			bool _bool;
@@ -53,12 +59,6 @@ private:
 };
 
 // ************************************************************************* //
-
-Json::Value::~Value()
-{
-	if(type == ValueType::STRING)
-		free(_string);
-}
 
 bool Json::open(const char* _file, Value& _root)
 {
@@ -91,6 +91,7 @@ bool Json::next(const Value& _current, Value& _next)
 		if(m_tokenPos[0] == '{' || m_tokenPos[0] == '[') ++parenthesis;
 		else if(m_tokenPos[0] == '}' || m_tokenPos[0] == ']') --parenthesis;
 	} while(parenthesis > 0 || m_tokenPos[0] != ',');
+	if(parenthesis < 0) return false;
 	readProperty(_next);
 	return true;
 }
@@ -104,6 +105,7 @@ bool Json::child(const Value& _current, Value& _next)
 		// Next token is '[' otherwise the type would have been wrong
 		if(m_tokenPos[0] != '[') return false;
 		// Read array value directly
+		if(!readToken()) return false;
 		return readValue(_next);
 	} else if( _current.type == ValueType::OBJECT)
 	{
@@ -119,30 +121,39 @@ bool Json::readProperty(Value& _next)
 {
 	// Read "name": ...
 	if(!readToken()) return false;
-	if(m_tokenPos[0] != '"') return false; // syntax error
+	if(m_tokenPos[0] != '"') return readValue(_next); // Expect to be inside an array.
 	if(!readToken()) return false;
-	if(m_readPos[0] != '"') return false; // syntax error
+	if((m_readPos[0] != '"') && (m_readPos[0] != '\0')) return false; // syntax error
 	*m_readPos = '\0'; // Force zero termination (destroys original data, but token parser can handle this).
 	++m_readPos;
 	_next.name = m_tokenPos;
 	if(!readToken()) return false;
 	if(m_tokenPos[0] != ':') return false; // syntax error
-	_next.offset = unsigned(m_readPos - m_fileContent.data()) + 1;
-	readValue(_next);
-	return true;
+	if(!readToken()) return false;
+	return readValue(_next);
 }
 
 bool Json::readValue(Value& _next)
 {
-	if(!readToken()) return false;
+	_next.offset = unsigned(m_tokenPos - m_fileContent.data());
+//	if(!readToken()) return false;
 	switch(m_tokenPos[0])
 	{
 	case 't': _next.type = ValueType::BOOL; _next._bool = true; break;
 	case 'b': _next.type = ValueType::BOOL; _next._bool = false; break;
-	case '"': _next.type = ValueType::STRING; _next._string = nullptr; break;
+	case '"': _next.type = ValueType::STRING; if(!readToken()) return false; *m_readPos = '\0'; _next._string = m_tokenPos; break;
 	case '[': _next.type = ValueType::ARRAY; break;
 	case '{': _next.type = ValueType::OBJECT; break;
-	default: /*INT OR FLOAT*/ break;
+	default: {
+		char nextChar = *m_readPos;
+		*m_readPos = 0; // Zero termination for current token
+		// Search the decimal '.'
+		const char* c = m_tokenPos;
+		while(c != m_readPos && *c != '.') ++c;
+		if(*c == '.') { _next.type = ValueType::FLOAT; _next._float = (float)atof(m_tokenPos); }
+		else { _next.type = ValueType::INT; _next._int = atoi(m_tokenPos); }
+		*m_readPos = nextChar;
+	} break;
 	}
 	return true;
 }

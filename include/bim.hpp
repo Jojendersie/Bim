@@ -1,6 +1,7 @@
 #pragma once
 
 #include "chunk.hpp"
+#include "material.hpp"
 #include <fstream>
 #include <ei/3dtypes.hpp>
 
@@ -74,6 +75,7 @@ namespace bim {
 		ei::IVec3 m_dimScale;			///< Vector to transform 3D index into 1D (1, m_numChunks.x, m_numChunks.x*m_numChunks.y)
 		std::vector<ChunkState> m_chunkStates; // TODO: make atomic
 		std::vector<Chunk> m_chunks;
+		std::vector<Material> m_materials;
 		Property::Val m_requestedProps;	///< All properties for which the getter should succeed.
 		Property::Val m_loadedProps;	///< Available properties (a superset of m_requestedProps).
 		ei::Box m_boundingBox;

@@ -1,4 +1,5 @@
 #include "bim.hpp"
+#include "json.hpp"
 #include <fstream>
 #include <iostream>
 
@@ -70,8 +71,8 @@ namespace bim {
 			std::cerr << "Missing chunks!\n";
 			return false;
 		}
-	
-		return true;
+
+		return loadEnv(_envFile);
 	}
 
 	void BinaryModel::store(const char* _bimFile, const char* _envFile)
@@ -310,4 +311,20 @@ namespace bim {
 		}
 	}
 
+	bool BinaryModel::loadEnv(const char* _envFile)
+	{
+		Json json;
+		Json::Value currentVal;
+		if(!json.open(_envFile, currentVal)) {
+			std::cerr << "Opening environment JSON failed!\n";
+			return false;
+		}
+
+		// Iterate through all materials
+		json.child(currentVal, currentVal);
+		do {
+			std::cout << currentVal.getName() << '\n';
+		} while(json.next(currentVal, currentVal));
+		return true;
+	}
 }

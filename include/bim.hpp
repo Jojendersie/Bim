@@ -15,7 +15,7 @@ namespace bim {
 	class BinaryModel
 	{
 	public:
-		BinaryModel(Property::Val _properties);
+		BinaryModel(Property::Val _properties = Property::Val(Property::POSITION | Property::TRIANGLE_IDX));
 		
 		/// Preload the model meta informations.
 		/// To truly load the data call makeChunkResident() for the portions you need.
@@ -60,6 +60,8 @@ namespace bim {
 		/// Check if the given property array satisfies the needs of the model.
 		bool validatePropertyDescriptors(PropDesc* _properties, int _num);*/
 	private:
+		bool loadEnv(const char* _envFile);
+
 		enum class ChunkState {
 			LOADED,
 			EMPTY,

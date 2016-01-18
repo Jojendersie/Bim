@@ -4,7 +4,8 @@
 
 class Json
 {
-	public:enum class ValueType
+public:
+	enum class ValueType
 	{
 		OBJECT,
 		ARRAY,
@@ -58,6 +59,29 @@ private:
 	bool readToken();
 };
 
+class JsonWriter
+{
+public:
+	JsonWriter() : m_idention(0), m_lastMode(Mode::NEWLINE) {}
+	bool open(const char* _file);
+	void beginObject();
+	void endObject();
+	void valuePreamble(const char* _valueName);
+	void value(const char* _string);
+	void value(float* _floatArray, int _num);
+private:
+	FILE* m_outFile;
+	int m_idention;
+
+	enum class Mode {
+		NEWLINE,
+		PREAMBLE,
+		ENDLINE
+	};
+	Mode m_lastMode;
+};
+
+// ************************************************************************* //
 // ************************************************************************* //
 
 bool Json::open(const char* _file, Value& _root)
@@ -180,4 +204,65 @@ bool Json::readToken()
 	// If the token is a printable separator its length is 0 here
 	if(m_readPos == m_tokenPos) ++m_readPos;
 	return true;
+}
+
+// ************************************************************************* //
+
+bool JsonWriter::open(const char* _file)
+{
+	m_outFile = fopen(_file, "wb");
+	return m_outFile != nullptr;
+}
+
+void JsonWriter::beginObject()
+{
+	if(m_lastMode == Mode::NEWLINE)
+		for(int i = 0; i < m_idention; ++i)
+			fwrite("\t", 1, 1, m_outFile);
+	fwrite("{\n", 2, 1, m_outFile);
+	++m_idention;
+	m_lastMode = Mode::NEWLINE;
+}
+
+void JsonWriter::endObject()
+{
+	if(m_lastMode == Mode::ENDLINE)
+		fwrite("\n", 1, 1, m_outFile);
+	--m_idention;
+	for(int i = 0; i < m_idention; ++i)
+		fwrite("\t", 1, 1, m_outFile);
+	fwrite("}", 1, 1, m_outFile);
+	m_lastMode = Mode::ENDLINE;
+}
+
+void JsonWriter::valuePreamble(const char* _valueName)
+{
+	if(m_lastMode == Mode::ENDLINE)
+		fwrite(",\n", 2, 1, m_outFile);
+	for(int i = 0; i < m_idention; ++i)
+		fwrite("\t", 1, 1, m_outFile);
+	fwrite("\"", 1, 1, m_outFile);
+	fwrite(_valueName, strlen(_valueName), 1, m_outFile);
+	fwrite("\": ", 3, 1, m_outFile);
+	m_lastMode = Mode::PREAMBLE;
+}
+
+void JsonWriter::value(const char* _string)
+{
+	fwrite("\"", 1, 1, m_outFile);
+	fwrite(_string, strlen(_string), 1, m_outFile);
+	fwrite("\"", 1, 1, m_outFile);
+	m_lastMode = Mode::ENDLINE;
+}
+
+void JsonWriter::value(float* _floatArray, int _num)
+{
+	if(_num == 1)
+		fprintf(m_outFile, "%g", _floatArray[0]);
+	else {
+		fprintf(m_outFile, "[");
+		for(int i = 0; i < _num; ++i)
+			fprintf(m_outFile, "%g%s", _floatArray[0], (i==_num-1) ? "]" : ", ");
+	}
+	m_lastMode = Mode::ENDLINE;
 }

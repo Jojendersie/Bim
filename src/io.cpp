@@ -77,8 +77,8 @@ namespace bim {
 
 	void BinaryModel::store(const char* _bimFile, const char* _envFile)
 	{
-		std::ofstream file(_bimFile, std::ios_base::binary);
-		if(m_file.fail()) {std::cerr << "Cannot open file for writing!\n"; return;}
+		std::ofstream file(_bimFile, std::ios_base::binary | std::ios_base::out);
+		if(!m_file.is_open()) {std::cerr << "Cannot open file for writing!\n"; return;}
 		SectionHeader header;
 	
 		header.type = META_SECTION;
@@ -91,6 +91,8 @@ namespace bim {
 		meta.numChunks = m_numChunks;
 		meta.boundingBox = m_boundingBox;
 		file.write(reinterpret_cast<char*>(&meta), sizeof(MetaSection));
+
+		storeEnv(_envFile);
 	}
 
 	void BinaryModel::makeChunkResident(const ei::IVec3& _chunk)
@@ -349,5 +351,35 @@ namespace bim {
 			m_materials.push_back(mat);
 		} while(json.next(currentVal, currentVal));
 		return true;
+	}
+
+	void BinaryModel::storeEnv(const char* _envFile)
+	{
+		JsonWriter json;
+		if(!json.open(_envFile)) {
+			std::cerr << "Opening environment JSON failed!\n";
+			return;
+		}
+		json.beginObject();
+		json.valuePreamble("materials");
+		json.beginObject();
+		for(auto& mat : m_materials)
+		{
+			json.valuePreamble(mat.getName().c_str());
+			json.beginObject();
+			for(auto& tex : mat.m_textureNames)
+			{
+				json.valuePreamble(tex.first.c_str());
+				json.value(tex.second.c_str());
+			}
+			for(auto& val : mat.m_values)
+			{
+				json.valuePreamble(val.first.c_str());
+				json.value(val.second.m_data, 4);
+			}
+			json.endObject();
+		}
+		json.endObject();
+		json.endObject();
 	}
 }

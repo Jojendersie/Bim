@@ -62,6 +62,7 @@ namespace bim {
 		bool validatePropertyDescriptors(PropDesc* _properties, int _num);*/
 	private:
 		bool loadEnv(const char* _envFile);
+		void storeEnv(const char* _envFile);
 
 		enum class ChunkState {
 			LOADED,

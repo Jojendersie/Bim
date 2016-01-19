@@ -40,7 +40,7 @@ namespace bim {
 
 	void BinaryModel::addMaterial(const Material& _material)
 	{
-		m_materialIndirection.push_back(m_materials.size());
+		m_materialIndirection.push_back((uint32)m_materials.size());
 		m_materials.push_back(_material);
 	}
 

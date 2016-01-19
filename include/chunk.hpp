@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ei/3dtypes.hpp>
+#include <ei/stdextensions.hpp>
 #include <vector>
 
 namespace bim {
@@ -77,20 +78,21 @@ namespace bim {
 		Node* getHierarchy()						{ return m_hasValidHierarchy ? m_hierarchy.data() : nullptr; }
 		const Node* getHierarchy() const			{ return m_hasValidHierarchy ? m_hierarchy.data() : nullptr; }
 		
-		struct VertexPropertyMap
+		struct FullVertex
 		{
-			const ei::Vec3* position;
-			const ei::Vec3* normal;
-			const ei::Vec3* tangent;
-			const ei::Vec3* bitangent;
-			const ei::Quaternion* qormal;
-			const ei::Vec2* texCoord0;
-			const ei::Vec2* texCoord1;
-			const ei::Vec2* texCoord2;
-			const ei::Vec2* texCoord3;
-			const ei::uint32* color;
+			ei::Vec3 position;
+			ei::Vec3 normal;
+			ei::Vec3 tangent;
+			ei::Vec3 bitangent;
+			ei::Quaternion qormal;
+			ei::Vec2 texCoord0;
+			ei::Vec2 texCoord1;
+			ei::Vec2 texCoord2;
+			ei::Vec2 texCoord3;
+			ei::uint32 color;
 			
-			VertexPropertyMap() { memset(this, 0, sizeof(VertexPropertyMap)); }
+			FullVertex();
+			bool operator == (const FullVertex& _rhs) const;
 		};
 
 		/// Add the data for an entire vertex. A vertex should contain the same set
@@ -98,18 +100,15 @@ namespace bim {
 		/// filled with defaults.
 		///
 		/// Example:
-		///	Vertex v; // buffer for own structured data for easier use
-		/// bim::Chunk::VertexPropertyMap descriptor;
-		/// descriptor.position = &v.position;
-		///	descriptor.normal = &v.normal;
+		/// bim::Chunk::FullVertexPropertyMap descriptor;
 		/// for(...) {
-		///		v.position = ...
-		///		v.normal = ...
+		///		descriptor.position = ...
+		///		descriptor.normal = ...
 		///		chunk.addVertex(descriptor);
 		///		...
 		///		chunk.addTriangle(UVec3(...), matID);
 		///	}
-		void addVertex(const VertexPropertyMap& _properties);
+		void addVertex(const FullVertex& _properties);
 		
 		void addTriangle(const ei::UVec3& _indices, uint32 _material);
 		
@@ -144,4 +143,24 @@ namespace bim {
 		void unifyQormals();
 	};
 
+} // namespace bim
+
+namespace std {
+	template<> struct hash<bim::Chunk::FullVertex>
+	{
+		size_t operator()(const bim::Chunk::FullVertex& x) const
+		{
+			size_t h = hash<ei::Vec3>()(x.position);
+			h ^= hash<ei::Vec3>()(x.normal);
+			h ^= hash<ei::Vec3>()(x.tangent);
+			h ^= hash<ei::Vec3>()(x.bitangent);
+			h ^= hash<ei::Vec4>()(*reinterpret_cast<const ei::Vec4*>(&x.qormal));
+			h ^= hash<ei::Vec2>()(x.texCoord0);
+			h ^= hash<ei::Vec2>()(x.texCoord1);
+			h ^= hash<ei::Vec2>()(x.texCoord2);
+			h ^= hash<ei::Vec2>()(x.texCoord3);
+			h ^= x.color;
+			return h;
+		}
+	};
 }

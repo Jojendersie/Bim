@@ -8,71 +8,33 @@ namespace bim {
 	{
 	}
 
-	void Chunk::addVertex(const VertexPropertyMap& _properties)
+	void Chunk::addVertex(const FullVertex& _properties)
 	{
-		if(_properties.position) {
-			if(m_positions.empty())
-				m_boundingBox.min = m_boundingBox.max = *_properties.position;
-			else {
-				m_boundingBox.min = min(*_properties.position, m_boundingBox.min);
-				m_boundingBox.max = max(*_properties.position, m_boundingBox.max);
-			}
-			m_positions.push_back(*_properties.position);
-		} else m_positions.push_back(ei::Vec3(0.0f));
+		if(m_positions.empty())
+			m_boundingBox.min = m_boundingBox.max = _properties.position;
+		else {
+			m_boundingBox.min = min(_properties.position, m_boundingBox.min);
+			m_boundingBox.max = max(_properties.position, m_boundingBox.max);
+		}
+		m_positions.push_back(_properties.position);
 		if(m_properties & Property::NORMAL)
-		{
-			if(_properties.normal)
-				m_normals.push_back(*_properties.normal);
-			else m_normals.push_back(ei::Vec3(0.0f, 1.0f, 0.0f));
-		}
+			m_normals.push_back(_properties.normal);
 		if(m_properties & Property::TANGENT)
-		{
-			if(_properties.tangent)
-				m_tangents.push_back(*_properties.tangent);
-			else m_tangents.push_back(ei::Vec3(1.0f, 0.0f, 0.0f));
-		}
+			m_tangents.push_back(_properties.tangent);
 		if(m_properties & Property::BITANGENT)
-		{
-			if(_properties.bitangent)
-				m_bitangents.push_back(*_properties.bitangent);
-			else m_bitangents.push_back(ei::Vec3(0.0f, 0.0f, 1.0f));
-		}
+			m_bitangents.push_back(_properties.bitangent);
 		if(m_properties & Property::QORMAL)
-		{
-			if(_properties.qormal)
-				m_qormals.push_back(*_properties.qormal);
-			else m_qormals.push_back(ei::qidentity());
-		}
+			m_qormals.push_back(_properties.qormal);
 		if(m_properties & Property::TEXCOORD0)
-		{
-			if(_properties.texCoord0)
-				m_texCoords0.push_back(*_properties.texCoord0);
-			else m_texCoords0.push_back(ei::Vec2(0.0f));
-		}
+			m_texCoords0.push_back(_properties.texCoord0);
 		if(m_properties & Property::TEXCOORD1)
-		{
-			if(_properties.texCoord1)
-				m_texCoords1.push_back(*_properties.texCoord1);
-			else m_texCoords1.push_back(ei::Vec2(0.0f));
-		}
+			m_texCoords1.push_back(_properties.texCoord1);
 		if(m_properties & Property::TEXCOORD2)
-		{
-			if(_properties.texCoord2)
-				m_texCoords2.push_back(*_properties.texCoord2);
-			else m_texCoords2.push_back(ei::Vec2(0.0f));
-		}
+			m_texCoords2.push_back(_properties.texCoord2);
 		if(m_properties & Property::TEXCOORD3)
-		{
-			if(_properties.texCoord3)
-				m_texCoords3.push_back(*_properties.texCoord3);
-			else m_texCoords3.push_back(ei::Vec2(0.0f));
-		}
+			m_texCoords3.push_back(_properties.texCoord3);
 		if(m_properties & Property::COLOR)
-		{
-			if(_properties.color)
-				m_colors.push_back(*_properties.color);
-			else m_colors.push_back(0);
-		}
+			m_colors.push_back(_properties.color);
 	}
 		
 	void Chunk::addTriangle(const ei::UVec3& _indices, uint32 _material)
@@ -80,6 +42,114 @@ namespace bim {
 		m_triangles.push_back(_indices);
 		if(m_properties & Property::TRIANGLE_MAT)
 			m_triangleMaterials.push_back(_material);
+	}
+
+	static ei::Vec3 denoise(const ei::Vec3& _x)
+	{
+		 return *reinterpret_cast<const ei::Vec3*>(&(*reinterpret_cast<const ei::UVec3*>(&_x) & 0xfffffff0));
+	}
+	static ei::Vec2 denoise(const ei::Vec2& _x)
+	{
+		return *reinterpret_cast<const ei::Vec2*>(&(*reinterpret_cast<const ei::UVec2*>(&_x) & 0xfffffff0));
+	}
+
+	void Chunk::removeRedundantVertices()
+	{
+		std::unordered_map<FullVertex, uint> vertexToIndex;
+		uint index = 0;
+		size_t numVertices = m_positions.size();
+		// Initialize the index mapping to index->self
+		std::vector<uint> indexToIndex(numVertices);
+		for(size_t i = 0; i < numVertices; ++i)
+			indexToIndex[i] = (uint)i;
+		// For each vertex
+		for(size_t i = 0; i < numVertices; ++i)
+		{
+			// Create a key
+			FullVertex key;
+			// Round properties (denoise) in vertices (otherwise hashing will miss many)
+			key.position = denoise(m_positions[i]);
+			if(!m_normals.empty()) key.normal = normalize(denoise(m_normals[i]));
+			if(!m_tangents.empty()) key.tangent = normalize(denoise(m_tangents[i]));
+			if(!m_bitangents.empty()) key.bitangent = normalize(denoise(m_bitangents[i]));
+			if(!m_qormals.empty()) key.qormal = m_qormals[i]; // TODO denoise
+			if(!m_texCoords0.empty()) key.texCoord0 = denoise(m_texCoords0[i]);
+			if(!m_texCoords1.empty()) key.texCoord1 = denoise(m_texCoords1[i]);
+			if(!m_texCoords2.empty()) key.texCoord2 = denoise(m_texCoords2[i]);
+			if(!m_texCoords3.empty()) key.texCoord3 = denoise(m_texCoords3[i]);
+			if(!m_colors.empty()) key.color = m_colors[i];
+			// Get the index
+			auto it = vertexToIndex.find(key);
+			if(it == vertexToIndex.end())
+			{
+				// This is a new vertex -> keep (but move to index)
+				vertexToIndex[key] = index;
+				indexToIndex[i] = index;
+				// Move data from i -> index
+				m_positions[index] = m_positions[i];
+				if(!m_normals.empty()) m_normals[index] = m_normals[i];
+				if(!m_tangents.empty()) m_tangents[index] = m_tangents[i];
+				if(!m_bitangents.empty()) m_bitangents[index] = m_bitangents[i];
+				if(!m_qormals.empty()) m_qormals[index] = m_qormals[i];
+				if(!m_texCoords0.empty()) m_texCoords0[index] = m_texCoords0[i];
+				if(!m_texCoords1.empty()) m_texCoords1[index] = m_texCoords1[i];
+				if(!m_texCoords2.empty()) m_texCoords2[index] = m_texCoords2[i];
+				if(!m_texCoords3.empty()) m_texCoords3[index] = m_texCoords3[i];
+				if(!m_colors.empty()) m_colors[index] = m_colors[i];
+				++index;
+			} else {
+				indexToIndex[i] = it->second;
+			}
+		}
+		// All vertices we kept are moved to a block of size 'index'. The remaining
+		// part can be removed.
+		m_positions.resize(index);
+		if(!m_normals.empty()) m_normals.resize(index);
+		if(!m_tangents.empty()) m_tangents.resize(index);
+		if(!m_bitangents.empty()) m_bitangents.resize(index);
+		if(!m_qormals.empty()) m_qormals.resize(index);
+		if(!m_texCoords0.empty()) m_texCoords0.resize(index);
+		if(!m_texCoords1.empty()) m_texCoords1.resize(index);
+		if(!m_texCoords2.empty()) m_texCoords2.resize(index);
+		if(!m_texCoords3.empty()) m_texCoords3.resize(index);
+		if(!m_colors.empty()) m_colors.resize(index);
+
+		// Rebuild index buffer
+		for(size_t i = 0; i < m_triangles.size(); ++i)
+		{
+			m_triangles[i].x = indexToIndex[m_triangles[i].x];
+			m_triangles[i].y = indexToIndex[m_triangles[i].y];
+			m_triangles[i].z = indexToIndex[m_triangles[i].z];
+		}
+	}
+
+	Chunk::FullVertex::FullVertex() :
+		position(0.0f),
+		normal(0.0f, 1.0f, 0.0),
+		tangent(1.0f, 0.0f, 0.0f),
+		bitangent(0.0f, 0.0f, 1.0f),
+		qormal(ei::qidentity()),
+		texCoord0(0.0f),
+		texCoord1(0.0f),
+		texCoord2(0.0f),
+		texCoord3(0.0f),
+		color(0)
+	{
+	}
+
+	bool Chunk::FullVertex::operator == (const FullVertex& _rhs) const
+	{
+		if(any(position != _rhs.position)) return false;
+		if(any(normal != _rhs.normal)) return false;
+		if(any(tangent != _rhs.tangent)) return false;
+		if(any(bitangent != _rhs.bitangent)) return false;
+		if(qormal != _rhs.qormal) return false;
+		if(any(texCoord0 != _rhs.texCoord0)) return false;
+		if(any(texCoord1 != _rhs.texCoord1)) return false;
+		if(any(texCoord2 != _rhs.texCoord2)) return false;
+		if(any(texCoord3 != _rhs.texCoord3)) return false;
+		if(color != _rhs.color) return false;
+		return true;
 	}
 
 } // namespace bim

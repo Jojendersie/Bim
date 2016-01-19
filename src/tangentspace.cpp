@@ -41,15 +41,16 @@ namespace bim {
 				if(uva.x * uvb.y - uva.y * uvb.x < 0.0f) // "normal" of the uv coordinates
 					triBitangent = -triBitangent;
 			}
-			float weight = acos(saturate(dot(e0, e1)));
+			float lenE0 = len(e0), lenE1 = len(e1), lenE2 = len(e2);
+			float weight = acos(saturate(dot(e0, e1) / (lenE0 * lenE1)));
 			m_normals[m_triangles[i].x] += triNormal * weight;
 			if(needsAll) m_tangents[m_triangles[i].x] += triTangent * weight;
 			if(needsAll) m_bitangents[m_triangles[i].x] += triBitangent * weight;
-			weight = acos(saturate(-dot(e0, e2)));
+			weight = acos(saturate(-dot(e0, e2) / (lenE0 * lenE2)));
 			m_normals[m_triangles[i].y] += triNormal * weight;
 			if(needsAll) m_tangents[m_triangles[i].y] += triTangent * weight;
 			if(needsAll) m_bitangents[m_triangles[i].y] += triBitangent * weight;
-			weight = acos(saturate(dot(e1, e2)));
+			weight = acos(saturate(dot(e1, e2) / (lenE1 * lenE2)));
 			m_normals[m_triangles[i].z] += triNormal * weight;
 			if(needsAll) m_tangents[m_triangles[i].z] += triTangent * weight;
 			if(needsAll) m_bitangents[m_triangles[i].z] += triBitangent * weight;

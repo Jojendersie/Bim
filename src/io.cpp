@@ -11,8 +11,10 @@ namespace bim {
 		uint64 size;	// Block size of following data
 	};
 
+	// Non powers of 2 are free to use (others are reserved for Property::...)
 	const int META_SECTION = 0x0;
 	const int CHUNK_SECTION = 0x3;
+	const int MATERIAL_REFERENCE = 0x5;
 
 	struct MetaSection
 	{
@@ -23,6 +25,8 @@ namespace bim {
 
 	bool BinaryModel::load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, bool _loadAll)
 	{
+		if(!loadEnv(_envFile)) return false;
+
 		m_file.open(_bimFile, std::ios_base::binary);
 		if(m_file.fail()) {
 			std::cerr << "Cannot open scene file!\n";
@@ -38,7 +42,7 @@ namespace bim {
 			std::cerr << "Invalid file. Meta-section not found!\n";
 			return false;
 		}
-	
+
 		MetaSection meta;
 		m_file.read(reinterpret_cast<char*>(&meta), sizeof(MetaSection));
 		if((meta.propertyMask & _requiredProperties) != _requiredProperties)
@@ -48,22 +52,44 @@ namespace bim {
 		}
 		m_numChunks = meta.numChunks;
 		m_dimScale = ei::IVec3(1, m_numChunks.x, m_numChunks.x * m_numChunks.y);
-		m_requestedProps = _requiredProperties;
-		m_loadedProps = Property::Val(_loadAll ? meta.propertyMask : _requiredProperties);
+		// Make sure at least positions and triangles are available
+		m_requestedProps = Property::Val((_requiredProperties == Property::DONT_CARE ? meta.propertyMask
+			: _requiredProperties) | Property::POSITION | Property::TRIANGLE_IDX);
+		m_loadedProps = Property::Val((_loadAll ? meta.propertyMask : m_requestedProps) | Property::POSITION | Property::TRIANGLE_IDX);
 		m_boundingBox = meta.boundingBox;
 	
 		m_chunks.clear();
+		m_chunkStates.clear();
 		Chunk emptyChunk;
 		emptyChunk.m_properties = m_loadedProps;
-		while(!m_file.eof())
+		while(m_file.read(reinterpret_cast<char*>(&header), sizeof(SectionHeader)))
 		{
-			m_file.read(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			if(header.type == CHUNK_SECTION)
 			{
-				int x = sizeof(m_file.tellg());
 				emptyChunk.m_address = m_file.tellg();
 				m_chunks.push_back(emptyChunk);
-			}
+				m_chunkStates.push_back(ChunkState::EMPTY);
+				m_file.seekg(header.size, std::ios_base::cur);
+			} else if(header.type == MATERIAL_REFERENCE)
+			{
+				uint32 num;
+				m_file.read(reinterpret_cast<char*>(&num), sizeof(uint32));
+				char buf[64];
+				for(uint i = 0; i < num; ++i)
+				{
+					m_file.read(buf, 64);
+					// Find the referenced material
+					uint index = 0;
+					for(auto& mat : m_materials)
+					{
+						if(strcmp(mat.getName().c_str(), buf) == 0)
+							break;
+						index++;
+					}
+					m_materialIndirection.push_back(index);
+				}
+			} else
+				m_file.seekg(header.size, std::ios_base::cur);
 		}
 	
 		if(m_chunks.size() != prod(m_numChunks))
@@ -72,13 +98,13 @@ namespace bim {
 			return false;
 		}
 
-		return loadEnv(_envFile);
+		return true;
 	}
 
 	void BinaryModel::store(const char* _bimFile, const char* _envFile)
 	{
 		std::ofstream file(_bimFile, std::ios_base::binary | std::ios_base::out);
-		if(!m_file.is_open()) {std::cerr << "Cannot open file for writing!\n"; return;}
+		if(m_file.bad()) {std::cerr << "Cannot open file for writing!\n"; return;}
 		SectionHeader header;
 	
 		header.type = META_SECTION;
@@ -92,7 +118,23 @@ namespace bim {
 		meta.boundingBox = m_boundingBox;
 		file.write(reinterpret_cast<char*>(&meta), sizeof(MetaSection));
 
-		storeEnv(_envFile);
+		header.type = MATERIAL_REFERENCE;
+		header.size = m_materialIndirection.size() * 64 + sizeof(int);
+		file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+		uint32 ibuf = (uint32)m_materialIndirection.size();
+		file.write(reinterpret_cast<char*>(&ibuf), sizeof(uint32));
+		//file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+		char zeroBuf[64] = {0};
+		for(uint idx : m_materialIndirection)
+		{
+			const char* str = m_materials[idx].getName().c_str();
+			size_t len = strlen(str);
+			file.write(str, len+1);
+			file.write(zeroBuf, 63 - len);
+		}
+
+		if(_envFile)
+			storeEnv(_envFile);
 	}
 
 	void BinaryModel::makeChunkResident(const ei::IVec3& _chunk)
@@ -104,11 +146,11 @@ namespace bim {
 		// Not in memory?
 		if(m_chunkStates[idx] != ChunkState::LOADED)
 		{
-			m_file.seekg(m_chunks[idx].m_address);
+			m_file.clear(); // Clear the error-bits (otherwise seekg fails for eof)
+			m_file.seekg(m_chunks[idx].m_address, std::ios_base::beg);
 			// Now read the real data
 			SectionHeader header;
-			m_file.read(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
-			while(header.type != CHUNK_SECTION && !m_file.eof())
+			while(m_file.read(reinterpret_cast<char*>(&header), sizeof(SectionHeader)) && header.type != CHUNK_SECTION)
 			{
 				// Should this property be loaded?
 				if((m_loadedProps & header.type) != 0)
@@ -168,7 +210,6 @@ namespace bim {
 						default: m_file.seekg(header.size, std::ios_base::cur);
 					}
 				} else m_file.seekg(header.size, std::ios_base::cur);
-				m_file.read(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 			}
 		
 			m_chunkStates[idx] = ChunkState::LOADED;
@@ -199,7 +240,7 @@ namespace bim {
 		if(!isChunkResident(_chunkPos)) {std::cerr << "Chunk is not resident and cannot be stored!\n"; return;}
 		int idx = dot(m_dimScale, _chunkPos);
 		std::ofstream file(_bimFile, std::ios_base::binary | std::ios_base::app);
-		if(m_file.fail()) {std::cerr << "Cannot open file for writing a chunk!\n"; return;}
+		if(m_file.bad()) {std::cerr << "Cannot open file for writing a chunk!\n"; return;}
 	
 		SectionHeader header;
 		header.type = CHUNK_SECTION;

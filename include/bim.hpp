@@ -52,14 +52,11 @@ namespace bim {
 		/// When editing the model bounding box is not always up to date. Make sure it is.
 		void refreshBoundingBox();
 
-		/// Helper structure to define inputs for appendVertex().
-		/*struct PropDesc
-		{
-			BinaryModel::Property property;
-			void* data;
-		};
-		/// Check if the given property array satisfies the needs of the model.
-		bool validatePropertyDescriptors(PropDesc* _properties, int _num);*/
+		/// Get a material by its index (the same as used int TRIANGLE_MAT).
+		/// The index is guaranteed to be non changing.
+		Material& getMaterial(uint _index) { return m_materials[m_materialIndirection[_index]]; }
+		const Material& getMaterial(uint _index) const { return m_materials[m_materialIndirection[_index]]; }
+		void addMaterial(const Material& _material);
 	private:
 		bool loadEnv(const char* _envFile);
 		void storeEnv(const char* _envFile);
@@ -77,6 +74,7 @@ namespace bim {
 		std::vector<ChunkState> m_chunkStates; // TODO: make atomic
 		std::vector<Chunk> m_chunks;
 		std::vector<Material> m_materials;
+		std::vector<uint> m_materialIndirection;
 		Property::Val m_requestedProps;	///< All properties for which the getter should succeed.
 		Property::Val m_loadedProps;	///< Available properties (a superset of m_requestedProps).
 		ei::Box m_boundingBox;

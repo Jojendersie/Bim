@@ -63,6 +63,7 @@ class JsonWriter
 {
 public:
 	JsonWriter() : m_idention(0), m_lastMode(Mode::NEWLINE) {}
+	~JsonWriter() { fclose(m_outFile); }
 	bool open(const char* _file);
 	void beginObject();
 	void endObject();
@@ -262,7 +263,7 @@ void JsonWriter::value(float* _floatArray, int _num)
 	else {
 		fprintf(m_outFile, "[");
 		for(int i = 0; i < _num; ++i)
-			fprintf(m_outFile, "%g%s", _floatArray[0], (i==_num-1) ? "]" : ", ");
+			fprintf(m_outFile, "%g%s", _floatArray[i], (i==_num-1) ? "]" : ", ");
 	}
 	m_lastMode = Mode::ENDLINE;
 }

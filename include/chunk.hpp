@@ -8,6 +8,7 @@ namespace bim {
 	struct Property
 	{
 		enum Val {
+			DONT_CARE		= 0,
 			// Vertex Properties:
 			POSITION		= 0x00000001,
 			NORMAL			= 0x00000002,

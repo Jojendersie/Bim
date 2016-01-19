@@ -147,6 +147,7 @@ namespace bim {
 		std::vector<uint32> m_triangleMaterials;
 		std::vector<Node> m_hierarchy;
 		std::vector<ei::UVec4> m_hierarchyLeaves;
+		std::vector<ei::Box> m_aaBoxes;
 		bool m_hasValidHierarchy;	// Hierarchy is invalidated on some edit functions
 		
 		/// Flip qormals to align them within each triangle.

@@ -18,4 +18,30 @@ namespace bim {
 		}
 	}
 
+	static void recomputeBVHAABoxesRec(const Node* _hierarchy, Box* _aaBoxes, uint32 _node)
+	{
+		uint32 child = _hierarchy[_node].firstChild;
+		if(child & 0x80000000)
+		{
+			// Build a box for all triangles in the leaf
+		} else {
+			// Iterate through all siblings
+			recomputeBVHAABoxesRec(_hierarchy, _aaBoxes, child);
+			_aaBoxes[_node] = _aaBoxes[child];
+			child = _hierarchy[child].escape;
+			while(_hierarchy[child].parent == _node && child != 0)
+			{
+				recomputeBVHAABoxesRec(_hierarchy, _aaBoxes, child);
+				_aaBoxes[_node] = Box(_aaBoxes[child], _aaBoxes[_node]);
+				child = _hierarchy[child].escape;
+			}
+		}
+	}
+
+	void Chunk::recomputeBVHAABoxes()
+	{
+		m_aaBoxes.resize(m_hierarchy.size());
+		recomputeBVHAABoxesRec(m_hierarchy.data(), m_aaBoxes.data(), 0);
+	}
+
 } // namespace bim

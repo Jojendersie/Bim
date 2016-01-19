@@ -119,7 +119,16 @@ namespace bim {
 		///	in the current model.
 		void computeTangentSpace();
 
-		void rebuildHierarchy(/*Build options*/);
+		enum class BuildMethod
+		{
+			KD_TREE,	///< Sort once in all directions, then recursively split at median
+		};
+		/// Build a hierarchy on top of all triangles
+		void rebuildHierarchy(BuildMethod _method, int _numTrianglesPerLeaf);
+		/// Compute bounding volumes for all nodes in the hierarchy.
+		void recomputeBVHAABoxes();
+		void recomputeBVHOBoxes();
+		void recomputeBVHSpheres();
 	private: friend class BinaryModel;
 		uint64 m_address;
 		Property::Val m_properties;
@@ -137,10 +146,17 @@ namespace bim {
 		std::vector<ei::UVec3> m_triangles;
 		std::vector<uint32> m_triangleMaterials;
 		std::vector<Node> m_hierarchy;
+		std::vector<ei::UVec4> m_hierarchyLeaves;
 		bool m_hasValidHierarchy;	// Hierarchy is invalidated on some edit functions
 		
 		/// Flip qormals to align them within each triangle.
 		void unifyQormals();
+
+		void buildBVH_kdtree(int _numTrianglesPerLeaf);
+		// All build methods must write left->firstChild and right->escape. After
+		// the primary build the remap iterates the tree once and replaces all pointers
+		// by the correct ones.
+		void remapNodePointers(uint32 _this, uint32 _parent, uint32 _escape);
 	};
 
 } // namespace bim

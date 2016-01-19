@@ -123,6 +123,19 @@ namespace bim {
 		}
 	}
 
+	void Chunk::rebuildHierarchy(BuildMethod _method, int _numTrianglesPerLeaf)
+	{
+		switch(_method)
+		{
+		case BuildMethod::KD_TREE:
+			buildBVH_kdtree(_numTrianglesPerLeaf);
+			break;
+		}
+
+		remapNodePointers(0, 0, 0);
+	}
+
+	// ********************************************************************* //
 	Chunk::FullVertex::FullVertex() :
 		position(0.0f),
 		normal(0.0f, 1.0f, 0.0),

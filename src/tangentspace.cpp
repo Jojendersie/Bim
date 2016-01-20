@@ -5,14 +5,14 @@ using namespace ei;
 
 namespace bim {
 
-	void Chunk::computeTangentSpace()
+	void Chunk::computeTangentSpace(Property::Val _components)
 	{
 		// Either compute normals only or compute the entire tangent space,
 		// orthonormalize and discard the unwanted.
 		// For quaternions the entire space is computed and then converted.
-		bool needsAll = (m_properties & Property::QORMAL) || (m_properties & Property::TANGENT) || (m_properties & Property::BITANGENT);
+		bool needsAll = (_components & Property::QORMAL) || (_components & Property::TANGENT) || (m_properties & Property::BITANGENT);
 		// Positions and texture coordinates are required for tangent space calculation.
-		if(needsAll && !((m_properties & Property::TEXCOORD0) && (m_properties & Property::POSITION))) {
+		if(needsAll && !((_components & Property::TEXCOORD0) && (_components & Property::POSITION))) {
 			std::cerr << "Can't compute tangent space. Texture coordinates missing.\n";
 			return;
 		}
@@ -23,7 +23,7 @@ namespace bim {
 			swap(m_tangents, std::vector<Vec3>(m_positions.size(), Vec3(0.0f)));
 			swap(m_bitangents, std::vector<Vec3>(m_positions.size(), Vec3(0.0f)));
 		}
-		if(m_properties & Property::QORMAL) swap(m_qormals, std::vector<Quaternion>(m_positions.size(), qidentity()));
+		if(_components & Property::QORMAL) swap(m_qormals, std::vector<Quaternion>(m_positions.size(), qidentity()));
 
 		// Get tangent spaces on triangles and average them on vertex locations
 		for(size_t i = 0; i < m_triangles.size(); ++i)
@@ -63,15 +63,20 @@ namespace bim {
 		else for(size_t i = 0; i < m_positions.size(); ++i)
 			m_normals[i] = normalize(m_normals[i]);
 		// Compute qormals by conversion
-		if(m_properties & Property::QORMAL)
+		if(_components & Property::QORMAL)
 			for(size_t i = 0; i < m_positions.size(); ++i)
 				m_qormals[i] = Quaternion(m_normals[i], m_tangents[i], m_bitangents[i]);
 
 		// Discard all the undesired properties for size reasons.
-		if(!(m_properties & Property::NORMAL)) swap(m_normals, std::vector<Vec3>());
-		if(!(m_properties & Property::TANGENT)) swap(m_tangents, std::vector<Vec3>());
-		if(!(m_properties & Property::BITANGENT)) swap(m_bitangents, std::vector<Vec3>());
-		if(!(m_properties & Property::QORMAL)) swap(m_qormals, std::vector<Quaternion>());
+		if(!(_components & Property::NORMAL)) swap(m_normals, std::vector<Vec3>());
+		if(!(_components & Property::TANGENT)) swap(m_tangents, std::vector<Vec3>());
+		if(!(_components & Property::BITANGENT)) swap(m_bitangents, std::vector<Vec3>());
+		if(!(_components & Property::QORMAL)) swap(m_qormals, std::vector<Quaternion>());
+
+		// Update flags (remove old, set new)
+		m_properties = Property::Val(m_properties & ~(Property::NORMAL
+			| Property::TANGENT | Property::BITANGENT | Property::QORMAL));
+		m_properties = Property::Val(m_properties | _components);
 	}
 
 	void Chunk::unifyQormals()

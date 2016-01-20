@@ -56,6 +56,7 @@ namespace bim {
 	{
 		m_aaBoxes.resize(m_hierarchy.size());
 		recomputeBVHAABoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), m_aaBoxes.data(), 0, m_numTrianglesPerLeaf);
+		m_properties = Property::Val(m_properties | Property::AABOX_BVH);
 	}
 
 } // namespace bim

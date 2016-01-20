@@ -76,7 +76,7 @@ namespace bim {
 		std::vector<Material> m_materials;
 		std::vector<uint> m_materialIndirection;
 		Property::Val m_requestedProps;	///< All properties for which the getter should succeed.
-		Property::Val m_loadedProps;	///< Available properties (a superset of m_requestedProps).
+		bool m_loadAll;					///< If a chunk is loaded, load all available data or only the required part
 		ei::Box m_boundingBox;
 	};
 

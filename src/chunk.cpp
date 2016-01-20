@@ -4,7 +4,8 @@ namespace bim {
 
 	Chunk::Chunk() :
 		m_address(0),
-		m_hasValidHierarchy(false)
+		m_properties(Property::DONT_CARE),
+		m_numTrianglesPerLeaf(0)
 	{
 	}
 
@@ -55,6 +56,8 @@ namespace bim {
 
 	void Chunk::removeRedundantVertices()
 	{
+		invalidateHierarchy();
+
 		std::unordered_map<FullVertex, uint> vertexToIndex;
 		uint index = 0;
 		size_t numVertices = m_positions.size();
@@ -134,6 +137,44 @@ namespace bim {
 		}
 
 		remapNodePointers(0, 0, 0);
+		m_properties = Property::Val(m_properties | Property::HIERARCHY);
+	}
+
+	void Chunk::addProperty(Property::Val _property)
+	{
+		if(!(m_properties & _property))
+		{
+			switch(_property)
+			{
+			case Property::NORMAL: swap(m_normals, std::vector<ei::Vec3>(m_positions.size(), FullVertex().position)); break;
+			case Property::TANGENT: swap(m_tangents, std::vector<ei::Vec3>(m_positions.size(), FullVertex().tangent)); break;
+			case Property::BITANGENT: swap(m_bitangents, std::vector<ei::Vec3>(m_positions.size(), FullVertex().bitangent)); break;
+			case Property::QORMAL: swap(m_qormals, std::vector<ei::Quaternion>(m_positions.size(), FullVertex().qormal)); break;
+			case Property::TEXCOORD0: swap(m_texCoords0, std::vector<ei::Vec2>(m_positions.size(), FullVertex().texCoord0)); break;
+			case Property::TEXCOORD1: swap(m_texCoords0, std::vector<ei::Vec2>(m_positions.size(), FullVertex().texCoord1)); break;
+			case Property::TEXCOORD2: swap(m_texCoords0, std::vector<ei::Vec2>(m_positions.size(), FullVertex().texCoord2)); break;
+			case Property::TEXCOORD3: swap(m_texCoords0, std::vector<ei::Vec2>(m_positions.size(), FullVertex().texCoord3)); break;
+			case Property::COLOR: swap(m_colors, std::vector<uint32>(m_positions.size(), FullVertex().color)); break;
+			case Property::TRIANGLE_MAT: swap(m_triangleMaterials, std::vector<uint32>(m_triangles.size(), 0)); break;
+			case Property::AABOX_BVH: swap(m_aaBoxes, std::vector<ei::Box>(m_hierarchy.size())); break;
+			case Property::OBOX_BVH: //swap(m_aaBoxes, std::vector<ei::Box>(m_hierarchy.size())); break;
+			case Property::SPHERE_BVH: //swap(m_aaBoxes, std::vector<ei::Box>(m_hierarchy.size())); break;
+			case Property::NDF_SGGX: //swap(m_aaBoxes, std::vector<ei::Box>(m_hierarchy.size())); break;
+			default: return;
+			}
+			m_properties = Property::Val(m_properties | _property);
+		}
+	}
+
+	void Chunk::invalidateHierarchy()
+	{
+		// Remove all data, it needs to be recomputed anyway
+		m_hierarchy.clear();
+		m_hierarchyLeaves.clear();
+		m_aaBoxes.clear();
+		m_properties = Property::Val(m_properties & ~(Property::HIERARCHY
+			| Property::HIERARCHY_MAT | Property::AABOX_BVH 
+			| Property::OBOX_BVH | Property::SPHERE_BVH | Property::NDF_SGGX));
 	}
 
 	// ********************************************************************* //

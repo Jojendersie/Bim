@@ -77,8 +77,8 @@ namespace bim {
 		uint32* getTriangleMaterials()				{ return m_triangleMaterials.empty() ? nullptr : m_triangleMaterials.data(); }
 		const uint32* getTriangleMaterials() const	{ return m_triangleMaterials.empty() ? nullptr : m_triangleMaterials.data(); }
 
-		Node* getHierarchy()						{ return m_hasValidHierarchy ? m_hierarchy.data() : nullptr; }
-		const Node* getHierarchy() const			{ return m_hasValidHierarchy ? m_hierarchy.data() : nullptr; }
+		Node* getHierarchy()						{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
+		const Node* getHierarchy() const			{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
 		
 		struct FullVertex
 		{
@@ -119,7 +119,10 @@ namespace bim {
 
 		/// Recomputes normals, ... dependent on which of the properties are used
 		///	in the current model.
-		void computeTangentSpace();
+		/// \param [in] _components Flags for the tangent space representations
+		///		which should be computed. NORMAL, TANGENT, BITANGENT and QORMAL are
+		///		valid.
+		void computeTangentSpace(Property::Val _components);
 
 		enum class BuildMethod
 		{
@@ -150,10 +153,16 @@ namespace bim {
 		std::vector<Node> m_hierarchy;
 		std::vector<ei::UVec4> m_hierarchyLeaves;
 		std::vector<ei::Box> m_aaBoxes;
-		bool m_hasValidHierarchy;	// Hierarchy is invalidated on some edit functions
 		uint m_numTrianglesPerLeaf;
+
+		// Allocate space for a certain property and initialize to defaults.
+		// If the property already exists nothing is done.
+		void addProperty(Property::Val _property);
+
+		// Delete all hierarchy information, because it is outdated.
+		void invalidateHierarchy();
 		
-		/// Flip qormals to align them within each triangle.
+		// Flip qormals to align them within each triangle.
 		void unifyQormals();
 
 		void buildBVH_kdtree();

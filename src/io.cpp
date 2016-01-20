@@ -19,7 +19,6 @@ namespace bim {
 
 	struct MetaSection
 	{
-		uint32 propertyMask;	// Flags for all available properties
 		ei::IVec3 numChunks;	// Number of stored chunks
 		ei::Box boundingBox;	// Entire scene bounding box
 	};
@@ -46,23 +45,17 @@ namespace bim {
 
 		MetaSection meta;
 		m_file.read(reinterpret_cast<char*>(&meta), sizeof(MetaSection));
-		if((meta.propertyMask & _requiredProperties) != _requiredProperties)
-		{
-			std::cerr << "File does not contain the requested properties!\n";
-			return false;
-		}
+		m_loadAll = true;
+		// Make sure at least positions and triangles are available
+		m_requestedProps = Property::Val(_requiredProperties | Property::POSITION | Property::TRIANGLE_IDX);
 		m_numChunks = meta.numChunks;
 		m_dimScale = ei::IVec3(1, m_numChunks.x, m_numChunks.x * m_numChunks.y);
-		// Make sure at least positions and triangles are available
-		m_requestedProps = Property::Val((_requiredProperties == Property::DONT_CARE ? meta.propertyMask
-			: _requiredProperties) | Property::POSITION | Property::TRIANGLE_IDX);
-		m_loadedProps = Property::Val((_loadAll ? meta.propertyMask : m_requestedProps) | Property::POSITION | Property::TRIANGLE_IDX);
 		m_boundingBox = meta.boundingBox;
 	
 		m_chunks.clear();
 		m_chunkStates.clear();
 		Chunk emptyChunk;
-		emptyChunk.m_properties = m_loadedProps;
+		emptyChunk.m_properties = Property::DONT_CARE;
 		while(m_file.read(reinterpret_cast<char*>(&header), sizeof(SectionHeader)))
 		{
 			if(header.type == CHUNK_SECTION)
@@ -114,7 +107,6 @@ namespace bim {
 	
 		MetaSection meta;
 		refreshBoundingBox();
-		meta.propertyMask = m_loadedProps;
 		meta.numChunks = m_numChunks;
 		meta.boundingBox = m_boundingBox;
 		file.write(reinterpret_cast<char*>(&meta), sizeof(MetaSection));
@@ -139,12 +131,13 @@ namespace bim {
 	}
 
 	template<typename T>
-	static void loadFileChunk(std::ifstream& _file, uint64 _size, std::vector<T>& _data)
+	static void loadFileChunk(std::ifstream& _file, uint64 _size, std::vector<T>& _data, Property::Val& _chunkProp, Property::Val _newProp)
 	{
 		// ASSERT: _size % sizeof(T) == 0
 		// Reserve the exact amount of memory
 		swap(_data, std::vector<T>(_size / sizeof(T)));
 		_file.read(reinterpret_cast<char*>(_data.data()), _size);
+		_chunkProp = Property::Val(_chunkProp | _newProp);
 	}
 
 	void BinaryModel::makeChunkResident(const ei::IVec3& _chunk)
@@ -163,30 +156,41 @@ namespace bim {
 			while(m_file.read(reinterpret_cast<char*>(&header), sizeof(SectionHeader)) && header.type != CHUNK_SECTION)
 			{
 				// Should this property be loaded?
-				if((m_loadedProps & header.type) != 0)
+				if(m_loadAll || (m_requestedProps & header.type) != 0)
 				{
 					switch(header.type)
 					{
-						case Property::POSITION: loadFileChunk(m_file, header.size, m_chunks[idx].m_positions); break;
-						case Property::NORMAL: loadFileChunk(m_file, header.size, m_chunks[idx].m_normals); break;
-						case Property::TANGENT: loadFileChunk(m_file, header.size, m_chunks[idx].m_tangents); break;
-						case Property::BITANGENT: loadFileChunk(m_file, header.size, m_chunks[idx].m_bitangents); break;
-						case Property::QORMAL: loadFileChunk(m_file, header.size, m_chunks[idx].m_qormals); break;
-						case Property::TEXCOORD0: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords0); break;
-						case Property::TEXCOORD1: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords1); break;
-						case Property::TEXCOORD2: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords2); break;
-						case Property::TEXCOORD3: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords3); break;
-						case Property::COLOR: loadFileChunk(m_file, header.size, m_chunks[idx].m_colors); break;
-						case Property::TRIANGLE_IDX: loadFileChunk(m_file, header.size, m_chunks[idx].m_triangles); break;
-						case Property::TRIANGLE_MAT: loadFileChunk(m_file, header.size, m_chunks[idx].m_triangleMaterials); break;
-						case Property::HIERARCHY: loadFileChunk(m_file, header.size, m_chunks[idx].m_hierarchy); break;
-						case HIERARCHY_LEAVES: loadFileChunk(m_file, header.size, m_chunks[idx].m_hierarchyLeaves); break;
-						case Property::AABOX_BVH: loadFileChunk(m_file, header.size, m_chunks[idx].m_aaBoxes); break;
+						case Property::POSITION: loadFileChunk(m_file, header.size, m_chunks[idx].m_positions, m_chunks[idx].m_properties, Property::POSITION); break;
+						case Property::NORMAL: loadFileChunk(m_file, header.size, m_chunks[idx].m_normals, m_chunks[idx].m_properties, Property::NORMAL); break;
+						case Property::TANGENT: loadFileChunk(m_file, header.size, m_chunks[idx].m_tangents, m_chunks[idx].m_properties, Property::TANGENT); break;
+						case Property::BITANGENT: loadFileChunk(m_file, header.size, m_chunks[idx].m_bitangents, m_chunks[idx].m_properties, Property::BITANGENT); break;
+						case Property::QORMAL: loadFileChunk(m_file, header.size, m_chunks[idx].m_qormals, m_chunks[idx].m_properties, Property::QORMAL); break;
+						case Property::TEXCOORD0: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords0, m_chunks[idx].m_properties, Property::TEXCOORD0); break;
+						case Property::TEXCOORD1: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords1, m_chunks[idx].m_properties, Property::TEXCOORD1); break;
+						case Property::TEXCOORD2: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords2, m_chunks[idx].m_properties, Property::TEXCOORD2); break;
+						case Property::TEXCOORD3: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords3, m_chunks[idx].m_properties, Property::TEXCOORD3); break;
+						case Property::COLOR: loadFileChunk(m_file, header.size, m_chunks[idx].m_colors, m_chunks[idx].m_properties, Property::COLOR); break;
+						case Property::TRIANGLE_IDX: loadFileChunk(m_file, header.size, m_chunks[idx].m_triangles, m_chunks[idx].m_properties, Property::TRIANGLE_IDX); break;
+						case Property::TRIANGLE_MAT: loadFileChunk(m_file, header.size, m_chunks[idx].m_triangleMaterials, m_chunks[idx].m_properties, Property::TRIANGLE_MAT); break;
+						case Property::HIERARCHY: loadFileChunk(m_file, header.size, m_chunks[idx].m_hierarchy, m_chunks[idx].m_properties, Property::HIERARCHY); break;
+						case HIERARCHY_LEAVES: loadFileChunk(m_file, header.size, m_chunks[idx].m_hierarchyLeaves, m_chunks[idx].m_properties, Property::DONT_CARE); break;
+						case Property::AABOX_BVH: loadFileChunk(m_file, header.size, m_chunks[idx].m_aaBoxes, m_chunks[idx].m_properties, Property::AABOX_BVH); break;
 						default: m_file.seekg(header.size, std::ios_base::cur);
 					}
 				} else m_file.seekg(header.size, std::ios_base::cur);
 			}
-		
+
+			if((m_requestedProps & m_chunks[idx].m_properties) != m_requestedProps)
+			{
+				// Warn here, but continue. Missing properties are filled by defaults.
+				std::cerr << "File does not contain the requested properties!\n";
+				// Fill in the missing chunk properties
+				Property::Val missing = Property::Val(m_requestedProps ^ (m_requestedProps & m_chunks[idx].m_properties));
+				for(uint32 i = 1; i != 0; i<<=1)
+					if(missing & i)
+						m_chunks[idx].addProperty(missing);
+			}
+	
 			m_chunkStates[idx] = ChunkState::LOADED;
 		}
 	}
@@ -232,66 +236,66 @@ namespace bim {
 		header.size = m_chunks[idx].m_positions.size() * sizeof(ei::Vec3) +
 					  m_chunks[idx].m_triangles.size() * sizeof(ei::UVec3) +
 					  sizeof(SectionHeader) * 2;
-		if(m_loadedProps & Property::NORMAL)
+		if(m_chunks[idx].m_properties & Property::NORMAL)
 			header.size += m_chunks[idx].m_normals.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
-		if(m_loadedProps & Property::TANGENT)
+		if(m_chunks[idx].m_properties & Property::TANGENT)
 			header.size += m_chunks[idx].m_tangents.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
-		if(m_loadedProps & Property::BITANGENT)
+		if(m_chunks[idx].m_properties & Property::BITANGENT)
 			header.size += m_chunks[idx].m_bitangents.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
-		if(m_loadedProps & Property::QORMAL)
+		if(m_chunks[idx].m_properties & Property::QORMAL)
 			header.size += m_chunks[idx].m_qormals.size() * sizeof(ei::Quaternion) + sizeof(SectionHeader);
-		if(m_loadedProps & Property::TEXCOORD0)
+		if(m_chunks[idx].m_properties & Property::TEXCOORD0)
 			header.size += m_chunks[idx].m_texCoords0.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
-		if(m_loadedProps & Property::TEXCOORD1)
+		if(m_chunks[idx].m_properties & Property::TEXCOORD1)
 			header.size += m_chunks[idx].m_texCoords1.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
-		if(m_loadedProps & Property::TEXCOORD2)
+		if(m_chunks[idx].m_properties & Property::TEXCOORD2)
 			header.size += m_chunks[idx].m_texCoords2.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
-		if(m_loadedProps & Property::TEXCOORD3)
+		if(m_chunks[idx].m_properties & Property::TEXCOORD3)
 			header.size += m_chunks[idx].m_texCoords3.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
-		if(m_loadedProps & Property::COLOR)
+		if(m_chunks[idx].m_properties & Property::COLOR)
 			header.size += m_chunks[idx].m_colors.size() * sizeof(uint32) + sizeof(SectionHeader);
-		if(m_loadedProps & Property::TRIANGLE_MAT)
+		if(m_chunks[idx].m_properties & Property::TRIANGLE_MAT)
 			header.size += m_chunks[idx].m_triangleMaterials.size() * sizeof(uint32) + sizeof(SectionHeader);
-		if(m_loadedProps & Property::HIERARCHY)
+		if(m_chunks[idx].m_properties & Property::HIERARCHY)
 			header.size += m_chunks[idx].m_hierarchy.size() * sizeof(Node) + sizeof(SectionHeader) * 2
 							+ m_chunks[idx].m_hierarchyLeaves.size() * sizeof(ei::UVec4);
-		if(m_loadedProps & Property::AABOX_BVH)
+		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			header.size += m_chunks[idx].m_aaBoxes.size() * sizeof(ei::Box) + sizeof(SectionHeader);
 		file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 	
 		// Vertex stuff
 		storeFileChunk(file, Property::POSITION, m_chunks[idx].m_positions);
-		if(m_loadedProps & Property::NORMAL)
+		if(m_chunks[idx].m_properties & Property::NORMAL)
 			storeFileChunk(file, Property::NORMAL, m_chunks[idx].m_normals);
-		if(m_loadedProps & Property::TANGENT)
+		if(m_chunks[idx].m_properties & Property::TANGENT)
 			storeFileChunk(file, Property::TANGENT, m_chunks[idx].m_tangents);
-		if(m_loadedProps & Property::BITANGENT)
+		if(m_chunks[idx].m_properties & Property::BITANGENT)
 			storeFileChunk(file, Property::BITANGENT, m_chunks[idx].m_bitangents);
-		if(m_loadedProps & Property::QORMAL)
+		if(m_chunks[idx].m_properties & Property::QORMAL)
 			storeFileChunk(file, Property::QORMAL, m_chunks[idx].m_qormals);
-		if(m_loadedProps & Property::TEXCOORD0)
+		if(m_chunks[idx].m_properties & Property::TEXCOORD0)
 			storeFileChunk(file, Property::TEXCOORD0, m_chunks[idx].m_texCoords0);
-		if(m_loadedProps & Property::TEXCOORD1)
+		if(m_chunks[idx].m_properties & Property::TEXCOORD1)
 			storeFileChunk(file, Property::TEXCOORD1, m_chunks[idx].m_texCoords1);
-		if(m_loadedProps & Property::TEXCOORD2)
+		if(m_chunks[idx].m_properties & Property::TEXCOORD2)
 			storeFileChunk(file, Property::TEXCOORD2, m_chunks[idx].m_texCoords2);
-		if(m_loadedProps & Property::TEXCOORD3)
+		if(m_chunks[idx].m_properties & Property::TEXCOORD3)
 			storeFileChunk(file, Property::TEXCOORD3, m_chunks[idx].m_texCoords3);
-		if(m_loadedProps & Property::COLOR)
+		if(m_chunks[idx].m_properties & Property::COLOR)
 			storeFileChunk(file, Property::COLOR, m_chunks[idx].m_colors);
 
 		// Triangle stuff
 		storeFileChunk(file, Property::TRIANGLE_IDX, m_chunks[idx].m_triangles);
-		if(m_loadedProps & Property::TRIANGLE_MAT)
+		if(m_chunks[idx].m_properties & Property::TRIANGLE_MAT)
 			storeFileChunk(file, Property::TRIANGLE_MAT, m_chunks[idx].m_triangleMaterials);
 
 		// Hierarchy stuff
-		if(m_loadedProps & Property::HIERARCHY)
+		if(m_chunks[idx].m_properties & Property::HIERARCHY)
 		{
 			storeFileChunk(file, Property::HIERARCHY, m_chunks[idx].m_hierarchy);
 			storeFileChunk(file, HIERARCHY_LEAVES, m_chunks[idx].m_hierarchyLeaves);
 		}
-		if(m_loadedProps & Property::AABOX_BVH)
+		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			storeFileChunk(file, Property::AABOX_BVH, m_chunks[idx].m_aaBoxes);
 	}
 

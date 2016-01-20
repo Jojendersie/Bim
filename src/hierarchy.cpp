@@ -33,6 +33,9 @@ namespace bim {
 			_aaBoxes[_node] = Box(tri);
 			for(uint i = 1; i < _numTrianglesPerLeaf; ++i)
 			{
+				// There are invalid triangles if a node is not filled
+				if(_leaves[leafIdx+i].x == _leaves[leafIdx+i].y)
+					break;
 				tri.v0 = _positions[_leaves[leafIdx+i].x];
 				tri.v1 = _positions[_leaves[leafIdx+i].y];
 				tri.v2 = _positions[_leaves[leafIdx+i].z];

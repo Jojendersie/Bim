@@ -43,25 +43,24 @@ namespace bim {
 	{
 		uint32 nodeIdx = (uint32)_in.hierarchy.size();
 		_in.hierarchy.resize(nodeIdx + 1);
-		Node& node = _in.hierarchy.back();
-		node.firstChild = node.escape = node.parent = 0;
+		_in.hierarchy[nodeIdx].firstChild = _in.hierarchy[nodeIdx].escape = _in.hierarchy[nodeIdx].parent = 0;
 
 		// Create a leaf if less than NUM_PRIMITIVES elements remain.
 		eiAssert(_min <= _max, "Node without triangles!");
 		if( (_max - _min) < _in.numTrianglesPerLeaf )
 		{
 			// Allocate a new leaf
-			uint32 leafIdx = (uint32)(_in.leaves.size() / _in.numTrianglesPerLeaf);
+			size_t leafIdx = _in.leaves.size();
 			_in.leaves.resize(_in.leaves.size() + _in.numTrianglesPerLeaf);
 			// Fill it
 			UVec4* trianglesPtr = &_in.leaves[leafIdx];
 			for( uint i = _min; i <= _max; ++i )
-				*(trianglesPtr++) = UVec4( _in.triangles[_in.sorted[0][i]], _in.materials[_in.sorted[0][i]] );
+				*(trianglesPtr++) = UVec4( _in.triangles[_in.sorted[0][i]], _in.materials.empty() ? 0 : _in.materials[_in.sorted[0][i]] );
 			for( uint i = 0; i < _in.numTrianglesPerLeaf - (_max - _min + 1); ++i )
 				*(trianglesPtr++) = UVec4(0); // Invalid triangle per convention
 
 			// Let the new node pointing to this leaf
-			node.firstChild = 0x80000000 | leafIdx;
+			_in.hierarchy[nodeIdx].firstChild = 0x80000000 | (uint32)(leafIdx / _in.numTrianglesPerLeaf);
 
 			return nodeIdx;
 		}
@@ -103,8 +102,8 @@ namespace bim {
 
 		// Set left and right into firstChild and escape. This is corrected later in
 		// remapNodePointers().
-		node.firstChild = build( _in, _min, m );
-		node.escape = build( _in, m+1, _max );
+		_in.hierarchy[nodeIdx].firstChild = build( _in, _min, m );
+		_in.hierarchy[nodeIdx].escape = build( _in, m+1, _max );
 
 		return nodeIdx;
 	}

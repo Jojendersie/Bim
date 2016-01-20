@@ -60,10 +60,11 @@ namespace bim {
 		{
 			if(header.type == CHUNK_SECTION)
 			{
+				m_file.read(reinterpret_cast<char*>(&emptyChunk.m_boundingBox), sizeof(ei::Box));
 				emptyChunk.m_address = m_file.tellg();
 				m_chunks.push_back(emptyChunk);
 				m_chunkStates.push_back(ChunkState::EMPTY);
-				m_file.seekg(header.size, std::ios_base::cur);
+				m_file.seekg(header.size - sizeof(ei::Box), std::ios_base::cur);
 			} else if(header.type == MATERIAL_REFERENCE)
 			{
 				uint32 num;
@@ -235,7 +236,7 @@ namespace bim {
 		header.type = CHUNK_SECTION;
 		header.size = m_chunks[idx].m_positions.size() * sizeof(ei::Vec3) +
 					  m_chunks[idx].m_triangles.size() * sizeof(ei::UVec3) +
-					  sizeof(SectionHeader) * 2;
+					  sizeof(SectionHeader) * 2 + sizeof(ei::Box);
 		if(m_chunks[idx].m_properties & Property::NORMAL)
 			header.size += m_chunks[idx].m_normals.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
 		if(m_chunks[idx].m_properties & Property::TANGENT)
@@ -261,7 +262,8 @@ namespace bim {
 							+ m_chunks[idx].m_hierarchyLeaves.size() * sizeof(ei::UVec4);
 		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			header.size += m_chunks[idx].m_aaBoxes.size() * sizeof(ei::Box) + sizeof(SectionHeader);
-		file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
+		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
+		file.write(reinterpret_cast<const char*>(&m_boundingBox), sizeof(ei::Box));
 	
 		// Vertex stuff
 		storeFileChunk(file, Property::POSITION, m_chunks[idx].m_positions);
@@ -309,15 +311,15 @@ namespace bim {
 		}
 
 		// Iterate through all materials
-		json.child(currentVal, currentVal);
+		if(json.child(currentVal, currentVal))
 		if(strcmp(currentVal.getName(), "materials") == 0)
 		{
-			json.child(currentVal, currentVal);
+			if(json.child(currentVal, currentVal))
 			do {
 				Material mat;
 				mat.m_name = currentVal.getName();
 				Json::Value matProp;
-				json.child(currentVal, matProp);
+				if(json.child(currentVal, matProp))
 				// A material contains a list of strings or float (arrays).
 				do {
 					if(matProp.getType() == Json::ValueType::STRING)

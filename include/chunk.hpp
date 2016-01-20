@@ -124,7 +124,7 @@ namespace bim {
 			KD_TREE,	///< Sort once in all directions, then recursively split at median
 		};
 		/// Build a hierarchy on top of all triangles
-		void rebuildHierarchy(BuildMethod _method, int _numTrianglesPerLeaf);
+		void rebuildHierarchy(BuildMethod _method, uint _numTrianglesPerLeaf);
 		/// Compute bounding volumes for all nodes in the hierarchy.
 		void recomputeBVHAABoxes();
 		void recomputeBVHOBoxes();
@@ -149,11 +149,12 @@ namespace bim {
 		std::vector<ei::UVec4> m_hierarchyLeaves;
 		std::vector<ei::Box> m_aaBoxes;
 		bool m_hasValidHierarchy;	// Hierarchy is invalidated on some edit functions
+		uint m_numTrianglesPerLeaf;
 		
 		/// Flip qormals to align them within each triangle.
 		void unifyQormals();
 
-		void buildBVH_kdtree(int _numTrianglesPerLeaf);
+		void buildBVH_kdtree();
 		// All build methods must write left->firstChild and right->escape. After
 		// the primary build the remap iterates the tree once and replaces all pointers
 		// by the correct ones.

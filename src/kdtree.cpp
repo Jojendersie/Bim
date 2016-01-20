@@ -51,7 +51,7 @@ namespace bim {
 		if( (_max - _min) < _in.numTrianglesPerLeaf )
 		{
 			// Allocate a new leaf
-			uint32 leafIdx = (uint32)_in.leaves.size();
+			uint32 leafIdx = (uint32)(_in.leaves.size() / _in.numTrianglesPerLeaf);
 			_in.leaves.resize(_in.leaves.size() + _in.numTrianglesPerLeaf);
 			// Fill it
 			UVec4* trianglesPtr = &_in.leaves[leafIdx];
@@ -109,7 +109,7 @@ namespace bim {
 		return nodeIdx;
 	}
 
-	void Chunk::buildBVH_kdtree(int _numTrianglesPerLeaf)
+	void Chunk::buildBVH_kdtree()
 	{
 		uint32 n = getNumTriangles();
 		std::unique_ptr<Vec3[]> centers(new Vec3[n]);
@@ -142,7 +142,7 @@ namespace bim {
 		);
 
 		KDTreeBuildInfo input = {m_hierarchy, m_hierarchyLeaves,
-			m_triangles, m_triangleMaterials, (uint)_numTrianglesPerLeaf,
+			m_triangles, m_triangleMaterials, m_numTrianglesPerLeaf,
 			sorted, centers.get()};
 		build(input, 0, n-1);
 	}

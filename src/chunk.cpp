@@ -123,12 +123,13 @@ namespace bim {
 		}
 	}
 
-	void Chunk::rebuildHierarchy(BuildMethod _method, int _numTrianglesPerLeaf)
+	void Chunk::rebuildHierarchy(BuildMethod _method, uint _numTrianglesPerLeaf)
 	{
+		m_numTrianglesPerLeaf = _numTrianglesPerLeaf;
 		switch(_method)
 		{
 		case BuildMethod::KD_TREE:
-			buildBVH_kdtree(_numTrianglesPerLeaf);
+			buildBVH_kdtree();
 			break;
 		}
 

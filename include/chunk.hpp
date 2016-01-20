@@ -28,10 +28,12 @@ namespace bim {
 			TRIANGLE_MAT	= 0x00020000,	///< One index for the material
 			
 			// Hierarchy Properties:
-			AABOX_BVH		= 0x10000000,
-			OBOX_BVH		= 0x20000000,
-			SPHERE_BVH		= 0x40000000,
-			ANY_BVH			= 0x80000000
+			AABOX_BVH		= 0x01000000,	///< Axis aligned bounding boxes for the hierarchy
+			OBOX_BVH		= 0x02000000,
+			SPHERE_BVH		= 0x04000000,
+			HIERARCHY		= 0x08000000,	///< Node and Leaves array for the hierarchy
+			NDF_SGGX		= 0x10000000,	///< Normal distribution functions for the hierarchy in SGGX basis
+			HIERARCHY_MAT	= 0x20000000,	///< A set of material parameters for the hierarchy
 		};
 	};
 	

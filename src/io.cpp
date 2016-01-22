@@ -93,11 +93,20 @@ namespace bim {
 			} else
 				m_file.seekg(header.size, std::ios_base::cur);
 		}
-	
+
+		// Validation
 		if(m_chunks.size() != prod(m_numChunks))
 		{
 			std::cerr << "Missing chunks!\n";
 			return false;
+		}
+
+		// If there where no material references stored build a dummy map
+		// to all existing materials.
+		if(m_materialIndirection.empty())
+		{
+			for(size_t i = 0; i < m_materials.size(); ++i)
+				m_materialIndirection.push_back((uint)i);
 		}
 
 		return true;

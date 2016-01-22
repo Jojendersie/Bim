@@ -23,8 +23,8 @@ public:
 		// Not type safe!
 		// Be sure the type is appropriate before calling one of the following.
 		const char* getString() const { return _string; }
-		float getFloat() const { return _float; }
-		int getInt() const { return _int; }
+		float getFloat() const { return type == ValueType::INT ? float(_int) : _float; }
+		int getInt() const { return type == ValueType::INT ? _int : int(_float); }
 		bool getBool() const { return _bool; }
 	private:
 		friend class Json;

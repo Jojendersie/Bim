@@ -58,6 +58,8 @@ namespace bim {
 		const Material& getMaterial(uint _index) const { return m_materials[m_materialIndirection[_index]]; }
 		void addMaterial(const Material& _material);
 		uint getNumMaterials() const { return (uint)m_materials.size(); }
+
+		const ei::Box& getBoundingBox() const { return m_boundingBox; }
 	private:
 		bool loadEnv(const char* _envFile);
 		void storeEnv(const char* _envFile);

@@ -105,6 +105,7 @@ namespace bim {
 		_in.hierarchy[nodeIdx].firstChild = build( _in, _min, m );
 		_in.hierarchy[nodeIdx].escape = build( _in, m+1, _max );
 
+		eiAssert(nodeIdx < _in.triangles.size(), "There are too many nodes!");
 		return nodeIdx;
 	}
 

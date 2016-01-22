@@ -53,7 +53,7 @@ namespace bim {
 
 		MetaSection meta;
 		m_file.read(reinterpret_cast<char*>(&meta), sizeof(MetaSection));
-		m_loadAll = true;
+		m_loadAll = _loadAll;
 		// Make sure at least positions and triangles are available
 		m_requestedProps = Property::Val(_requiredProperties | Property::POSITION | Property::TRIANGLE_IDX);
 		m_numChunks = meta.numChunks;
@@ -203,7 +203,7 @@ namespace bim {
 				Property::Val missing = Property::Val(m_requestedProps ^ (m_requestedProps & m_chunks[idx].m_properties));
 				for(uint32 i = 1; i != 0; i<<=1)
 					if(missing & i)
-						m_chunks[idx].addProperty(missing);
+						m_chunks[idx].addProperty(Property::Val(i));
 			}
 	
 			m_chunkStates[idx] = ChunkState::LOADED;

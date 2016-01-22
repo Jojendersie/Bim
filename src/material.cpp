@@ -7,21 +7,20 @@ namespace bim {
 	{
 	}
 
-	const char* Material::getTexture(const std::string& _name) const
+	const std::string* Material::getTexture(const std::string& _name) const
 	{
 		auto it = m_textureNames.find(_name);
 		if(it != m_textureNames.end())
-			return it->second.c_str();
+			return &it->second;
 		return nullptr;
 	}
 
-	const ei::Vec4& Material::get(const std::string& _name) const
+	const ei::Vec4& Material::get(const std::string& _name, const ei::Vec4& _default) const
 	{
 		auto it = m_values.find(_name);
 		if(it != m_values.end())
 			return it->second;
-		static ei::Vec4 nullVec(0.0f);
-		return nullVec;
+		return _default;
 	}
 
 	void Material::set(const std::string& _name, const ei::Vec4& _value)

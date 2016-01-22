@@ -5,7 +5,8 @@ namespace bim {
 	Chunk::Chunk() :
 		m_address(0),
 		m_properties(Property::DONT_CARE),
-		m_numTrianglesPerLeaf(0)
+		m_numTrianglesPerLeaf(0),
+		m_numTreeLevels(0)
 	{
 	}
 
@@ -136,7 +137,7 @@ namespace bim {
 			break;
 		}
 
-		remapNodePointers(0, 0, 0);
+		m_numTreeLevels = remapNodePointers(0, 0, 0);
 		m_properties = Property::Val(m_properties | Property::HIERARCHY);
 	}
 
@@ -175,6 +176,7 @@ namespace bim {
 		m_properties = Property::Val(m_properties & ~(Property::HIERARCHY
 			| Property::HIERARCHY_MAT | Property::AABOX_BVH 
 			| Property::OBOX_BVH | Property::SPHERE_BVH | Property::NDF_SGGX));
+		m_numTreeLevels = 0;
 	}
 
 	// ********************************************************************* //

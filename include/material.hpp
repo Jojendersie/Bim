@@ -17,9 +17,10 @@ namespace bim {
 		Material(std::string _name);
 		// Get names for textures of properties.
 		// If the function returns nullptr use the scalar value.
-		const char* getTexture(const std::string& _name) const;
-		// Get the value of some property.
-		const ei::Vec4& get(const std::string& _name) const;
+		const std::string* getTexture(const std::string& _name) const;
+		// Get the value of some property. If the property does not exist return the
+		// default instead.
+		const ei::Vec4& get(const std::string& _name, const ei::Vec4& _default = ei::Vec4(0.0f)) const;
 		const std::string& getName() const { return m_name; }
 		// Add or replace a value
 		void set(const std::string& _name, const ei::Vec4& _value);

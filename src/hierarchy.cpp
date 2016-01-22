@@ -4,7 +4,7 @@ using namespace ei;
 
 namespace bim {
 	
-	void Chunk::remapNodePointers(uint32 _this, uint32 _parent, uint32 _escape)
+	uint Chunk::remapNodePointers(uint32 _this, uint32 _parent, uint32 _escape)
 	{
 		// Keep firstChild, because firstChild == left in any case.
 		uint32 left = m_hierarchy[_this].firstChild;
@@ -13,9 +13,11 @@ namespace bim {
 		m_hierarchy[_this].escape = _escape;
 		if(!(left & 0x80000000)) // If not a leaf-child
 		{
-			remapNodePointers(left, _this, right);
-			remapNodePointers(right, _this, _escape);
+			uint l = remapNodePointers(left, _this, right);
+			uint r = remapNodePointers(right, _this, _escape);
+			return max(l, r) + 1;
 		}
+		return 1;
 	}
 
 	static void recomputeBVHAABoxesRec(const Vec3* _positions, const UVec4* _leaves, const Node* _hierarchy, Box* _aaBoxes, uint32 _node, uint _numTrianglesPerLeaf)

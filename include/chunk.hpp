@@ -72,14 +72,20 @@ namespace bim {
 		const uint32* getColors() const				{ return m_colors.empty() ? nullptr : m_colors.data(); }
 
 		uint getNumTriangles() const				{ return (uint)m_triangles.size(); }
+		uint getNumTrianglesPerLeaf() const			{ return m_numTrianglesPerLeaf; }
 		ei::UVec3* getTriangles()					{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
 		const ei::UVec3* getTriangles() const		{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
 		uint32* getTriangleMaterials()				{ return m_triangleMaterials.empty() ? nullptr : m_triangleMaterials.data(); }
 		const uint32* getTriangleMaterials() const	{ return m_triangleMaterials.empty() ? nullptr : m_triangleMaterials.data(); }
 
+		uint getNumNodes() const					{ return (uint)m_hierarchy.size(); }
+		uint getNumTreeLevels() const				{ return m_numTreeLevels; }
+		uint getNumLeafNodes() const				{ return (uint)(m_hierarchyLeaves.size() / m_numTrianglesPerLeaf); }
 		Node* getHierarchy()						{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
 		const Node* getHierarchy() const			{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
-		
+		const ei::Box* getHierarchyAABoxes() const	{ return m_aaBoxes.data(); }
+		const ei::UVec4* getLeafNodes() const		{ return m_hierarchyLeaves.data(); }
+
 		struct FullVertex
 		{
 			ei::Vec3 position;
@@ -154,6 +160,7 @@ namespace bim {
 		std::vector<ei::UVec4> m_hierarchyLeaves;
 		std::vector<ei::Box> m_aaBoxes;
 		uint m_numTrianglesPerLeaf;
+		uint m_numTreeLevels;
 
 		// Allocate space for a certain property and initialize to defaults.
 		// If the property already exists nothing is done.
@@ -169,7 +176,8 @@ namespace bim {
 		// All build methods must write left->firstChild and right->escape. After
 		// the primary build the remap iterates the tree once and replaces all pointers
 		// by the correct ones.
-		void remapNodePointers(uint32 _this, uint32 _parent, uint32 _escape);
+		// Returns the maximum tree depth.
+		uint remapNodePointers(uint32 _this, uint32 _parent, uint32 _escape);
 	};
 
 } // namespace bim

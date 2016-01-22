@@ -16,11 +16,19 @@ namespace bim {
 	const int CHUNK_SECTION = 0x3;
 	const int MATERIAL_REFERENCE = 0x5;
 	const int HIERARCHY_LEAVES = 0x08000001;
+	const int CHUNK_META_SECTION = 0x6;
 
 	struct MetaSection
 	{
 		ei::IVec3 numChunks;	// Number of stored chunks
 		ei::Box boundingBox;	// Entire scene bounding box
+	};
+
+	struct ChunkMetaSection
+	{
+		ei::Box boundingBox;
+		uint m_numTrianglesPerLeaf;
+		uint m_numTreeLevels;
 	};
 
 	bool BinaryModel::load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, bool _loadAll)
@@ -60,11 +68,10 @@ namespace bim {
 		{
 			if(header.type == CHUNK_SECTION)
 			{
-				m_file.read(reinterpret_cast<char*>(&emptyChunk.m_boundingBox), sizeof(ei::Box));
 				emptyChunk.m_address = m_file.tellg();
 				m_chunks.push_back(emptyChunk);
 				m_chunkStates.push_back(ChunkState::EMPTY);
-				m_file.seekg(header.size - sizeof(ei::Box), std::ios_base::cur);
+				m_file.seekg(header.size, std::ios_base::cur);
 			} else if(header.type == MATERIAL_REFERENCE)
 			{
 				uint32 num;
@@ -161,6 +168,13 @@ namespace bim {
 				{
 					switch(header.type)
 					{
+						case CHUNK_META_SECTION: {
+							ChunkMetaSection meta;
+							m_file.read(reinterpret_cast<char*>(&meta), sizeof(ChunkMetaSection));
+							m_chunks[idx].m_boundingBox = meta.boundingBox;
+							m_chunks[idx].m_numTrianglesPerLeaf = meta.m_numTrianglesPerLeaf;
+							m_chunks[idx].m_numTreeLevels = meta.m_numTreeLevels;
+							break; }
 						case Property::POSITION: loadFileChunk(m_file, header.size, m_chunks[idx].m_positions, m_chunks[idx].m_properties, Property::POSITION); break;
 						case Property::NORMAL: loadFileChunk(m_file, header.size, m_chunks[idx].m_normals, m_chunks[idx].m_properties, Property::NORMAL); break;
 						case Property::TANGENT: loadFileChunk(m_file, header.size, m_chunks[idx].m_tangents, m_chunks[idx].m_properties, Property::TANGENT); break;
@@ -236,7 +250,7 @@ namespace bim {
 		header.type = CHUNK_SECTION;
 		header.size = m_chunks[idx].m_positions.size() * sizeof(ei::Vec3) +
 					  m_chunks[idx].m_triangles.size() * sizeof(ei::UVec3) +
-					  sizeof(SectionHeader) * 2 + sizeof(ei::Box);
+					  sizeof(SectionHeader) * 2 + sizeof(ChunkMetaSection);
 		if(m_chunks[idx].m_properties & Property::NORMAL)
 			header.size += m_chunks[idx].m_normals.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
 		if(m_chunks[idx].m_properties & Property::TANGENT)
@@ -263,7 +277,15 @@ namespace bim {
 		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			header.size += m_chunks[idx].m_aaBoxes.size() * sizeof(ei::Box) + sizeof(SectionHeader);
 		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
-		file.write(reinterpret_cast<const char*>(&m_boundingBox), sizeof(ei::Box));
+
+		header.type = CHUNK_META_SECTION;
+		header.size = sizeof(ChunkMetaSection);
+		ChunkMetaSection meta;
+		meta.boundingBox = m_chunks[idx].m_boundingBox;
+		meta.m_numTrianglesPerLeaf = m_chunks[idx].m_numTrianglesPerLeaf;
+		meta.m_numTreeLevels = m_chunks[idx].m_numTreeLevels;
+		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
+		file.write(reinterpret_cast<const char*>(&meta), sizeof(ChunkMetaSection));
 	
 		// Vertex stuff
 		storeFileChunk(file, Property::POSITION, m_chunks[idx].m_positions);

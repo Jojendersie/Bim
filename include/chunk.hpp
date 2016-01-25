@@ -150,6 +150,7 @@ namespace bim {
 		enum class BuildMethod
 		{
 			KD_TREE,	///< Sort once in all directions, then recursively split at median
+			SAH,		///< Use surface area heuristic in the 'largest' dimension.
 		};
 		/// Build a hierarchy on top of all triangles
 		void rebuildHierarchy(BuildMethod _method, uint _numTrianglesPerLeaf);
@@ -194,6 +195,7 @@ namespace bim {
 		void unifyQormals();
 
 		void buildBVH_kdtree();
+		void buildBVH_SAHsplit();
 		// All build methods must write left->firstChild and right->escape. After
 		// the primary build the remap iterates the tree once and replaces all pointers
 		// by the correct ones.

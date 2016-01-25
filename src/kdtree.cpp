@@ -10,9 +10,9 @@ namespace bim {
 	{
 		std::vector<Node>& hierarchy;
 		std::vector<UVec4>& leaves;
-		std::vector<UVec3>& triangles;
-		std::vector<uint32>& materials;
-		uint numTrianglesPerLeaf;
+		const std::vector<UVec3>& triangles;
+		const std::vector<uint32>& materials;
+		const uint numTrianglesPerLeaf;
 		const std::unique_ptr<uint32[]>* sorted;
 		Vec3* centers;
 	};

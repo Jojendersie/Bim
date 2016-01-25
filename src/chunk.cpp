@@ -135,6 +135,9 @@ namespace bim {
 		case BuildMethod::KD_TREE:
 			buildBVH_kdtree();
 			break;
+		case BuildMethod::SAH:
+			buildBVH_SAHsplit();
+			break;
 		}
 
 		m_numTreeLevels = remapNodePointers(0, 0, 0);

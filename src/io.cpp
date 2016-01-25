@@ -199,6 +199,7 @@ namespace bim {
 						case Property::HIERARCHY: loadFileChunk(m_file, header.size, m_chunks[idx].m_hierarchy, m_chunks[idx].m_properties, Property::HIERARCHY); break;
 						case HIERARCHY_LEAVES: loadFileChunk(m_file, header.size, m_chunks[idx].m_hierarchyLeaves, m_chunks[idx].m_properties, Property::DONT_CARE); break;
 						case Property::AABOX_BVH: loadFileChunk(m_file, header.size, m_chunks[idx].m_aaBoxes, m_chunks[idx].m_properties, Property::AABOX_BVH); break;
+						case Property::NDF_SGGX: loadFileChunk(m_file, header.size, m_chunks[idx].m_nodeNDFs, m_chunks[idx].m_properties, Property::NDF_SGGX); break;
 						default: m_file.seekg(header.size, std::ios_base::cur);
 					}
 				} else m_file.seekg(header.size, std::ios_base::cur);
@@ -285,6 +286,8 @@ namespace bim {
 							+ m_chunks[idx].m_hierarchyLeaves.size() * sizeof(ei::UVec4);
 		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			header.size += m_chunks[idx].m_aaBoxes.size() * sizeof(ei::Box) + sizeof(SectionHeader);
+		if(m_chunks[idx].m_properties & Property::NDF_SGGX)
+			header.size += m_chunks[idx].m_nodeNDFs.size() * sizeof(Chunk::SGGX) + sizeof(SectionHeader);
 		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
 
 		header.type = CHUNK_META_SECTION;
@@ -330,6 +333,8 @@ namespace bim {
 		}
 		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			storeFileChunk(file, Property::AABOX_BVH, m_chunks[idx].m_aaBoxes);
+		if(m_chunks[idx].m_properties & Property::NDF_SGGX)
+			storeFileChunk(file, Property::NDF_SGGX, m_chunks[idx].m_nodeNDFs);
 	}
 
 	bool BinaryModel::loadEnv(const char* _envFile)

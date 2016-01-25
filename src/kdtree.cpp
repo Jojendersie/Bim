@@ -141,6 +141,7 @@ namespace bim {
 			[&centers](const uint32 _lhs, const uint32 _rhs) { return centers[_lhs].z < centers[_rhs].z; }
 		);
 
+		m_hierarchy.reserve(n*2);
 		KDTreeBuildInfo input = {m_hierarchy, m_hierarchyLeaves,
 			m_triangles, m_triangleMaterials, m_numTrianglesPerLeaf,
 			sorted, centers.get()};

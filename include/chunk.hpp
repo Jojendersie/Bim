@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <ei/3dtypes.hpp>
 #include <ei/stdextensions.hpp>
@@ -140,6 +140,24 @@ namespace bim {
 		void recomputeBVHAABoxes();
 		void recomputeBVHOBoxes();
 		void recomputeBVHSpheres();
+
+		/// A simplification of a node by SGGX base function.
+		/// \details This stores the encoded entries of a symmetric matrix S:
+		///		σ = (sqrt(S_xx), sqrt(S_yy), sqrt(S_zz))
+		///		r = (S_xy/sqrt(S_xx S_yy), S_xz/sqrt(S_xx S_zz), S_yz/sqrt(S_yy S_zz))
+		///
+		///		To reconstruct the matrix do the following:
+		///		S_xx = σ.x^2    S_yy = σ.y^2    S_zz = σ.z^2
+		///		S_xy = r.x * σ.x * σ.y
+		///		S_xz = r.y * σ.x * σ.z
+		///		S_yz = r.z * σ.y * σ.z
+		struct SGGX
+		{
+			ei::Vec<uint16, 3> σ;		///< Values in [0,1] discretized to 16 bit
+			ei::Vec<uint16, 3> r;		///< Values in [-1,1] discretized to 16 bit (the interval is shifted by *0.5-0.5 to fit the same format like σ)
+		};
+		void computeBVHSGGXApproximations();
+
 	private: friend class BinaryModel;
 		uint64 m_address;
 		Property::Val m_properties;
@@ -159,6 +177,7 @@ namespace bim {
 		std::vector<Node> m_hierarchy;
 		std::vector<ei::UVec4> m_hierarchyLeaves;
 		std::vector<ei::Box> m_aaBoxes;
+		std::vector<SGGX> m_nodeNDFs;
 		uint m_numTrianglesPerLeaf;
 		uint m_numTreeLevels;
 

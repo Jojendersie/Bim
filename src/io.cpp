@@ -31,7 +31,7 @@ namespace bim {
 		uint m_numTreeLevels;
 	};
 
-	bool BinaryModel::load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, bool _loadAll)
+	bool BinaryModel::load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, Property::Val _optionalProperties, bool _loadAll)
 	{
 		if(!loadEnv(_envFile)) return false;
 
@@ -56,6 +56,7 @@ namespace bim {
 		m_loadAll = _loadAll;
 		// Make sure at least positions and triangles are available
 		m_requestedProps = Property::Val(_requiredProperties | Property::POSITION | Property::TRIANGLE_IDX);
+		m_optionalProperties = _optionalProperties;
 		m_numChunks = meta.numChunks;
 		m_dimScale = ei::IVec3(1, m_numChunks.x, m_numChunks.x * m_numChunks.y);
 		m_boundingBox = meta.boundingBox;
@@ -173,7 +174,7 @@ namespace bim {
 			while(m_file.read(reinterpret_cast<char*>(&header), sizeof(SectionHeader)) && header.type != CHUNK_SECTION)
 			{
 				// Should this property be loaded?
-				if(m_loadAll || (m_requestedProps & header.type) != 0)
+				if(m_loadAll || ((m_requestedProps & header.type) != 0) || ((m_optionalProperties & header.type) != 0))
 				{
 					switch(header.type)
 					{
@@ -287,7 +288,7 @@ namespace bim {
 		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			header.size += m_chunks[idx].m_aaBoxes.size() * sizeof(ei::Box) + sizeof(SectionHeader);
 		if(m_chunks[idx].m_properties & Property::NDF_SGGX)
-			header.size += m_chunks[idx].m_nodeNDFs.size() * sizeof(Chunk::SGGX) + sizeof(SectionHeader);
+			header.size += m_chunks[idx].m_nodeNDFs.size() * sizeof(SGGX) + sizeof(SectionHeader);
 		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
 
 		header.type = CHUNK_META_SECTION;

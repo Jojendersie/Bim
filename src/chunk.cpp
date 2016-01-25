@@ -160,7 +160,7 @@ namespace bim {
 			case Property::AABOX_BVH: swap(m_aaBoxes, std::vector<ei::Box>(m_hierarchy.size())); break;
 			case Property::OBOX_BVH: //swap(m_aaBoxes, std::vector<ei::Box>(m_hierarchy.size())); break;
 			case Property::SPHERE_BVH: //swap(m_aaBoxes, std::vector<ei::Box>(m_hierarchy.size())); break;
-			case Property::NDF_SGGX: //swap(m_aaBoxes, std::vector<ei::Box>(m_hierarchy.size())); break;
+			case Property::NDF_SGGX: swap(m_nodeNDFs, std::vector<SGGX>(m_hierarchy.size())); break;
 			default: return;
 			}
 			m_properties = Property::Val(m_properties | _property);

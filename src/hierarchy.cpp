@@ -140,7 +140,7 @@ namespace bim {
 		return s;
 	}
 
-	static TmpSGGX computeBVHSGGXApproximationsRec(const Vec3* _positions, const Vec3* _normals, const Node* _hierarchy, uint32 _node, const UVec4* _leaves, const Box* _aaBoxes, uint _numTrianglesPerLeaf, std::vector<Chunk::SGGX>& _output)
+	static TmpSGGX computeBVHSGGXApproximationsRec(const Vec3* _positions, const Vec3* _normals, const Node* _hierarchy, uint32 _node, const UVec4* _leaves, const Box* _aaBoxes, uint _numTrianglesPerLeaf, std::vector<SGGX>& _output)
 	{
 		TmpSGGX s;
 		// End of recursion (inner node which points to one leaf)

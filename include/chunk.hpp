@@ -44,6 +44,23 @@ namespace bim {
 		uint32 escape;		///< Index of the next element in a preorder traversal if children are skipped. This can be a sibling or some node on a higher level.
 	};
 
+	/// A simplification of a node by SGGX base function.
+	/// \details This stores the encoded entries of a symmetric matrix S:
+	///		σ = (sqrt(S_xx), sqrt(S_yy), sqrt(S_zz))
+	///		r = (S_xy/sqrt(S_xx S_yy), S_xz/sqrt(S_xx S_zz), S_yz/sqrt(S_yy S_zz))
+	///
+	///		To reconstruct the matrix do the following:
+	///		S_xx = σ.x^2    S_yy = σ.y^2    S_zz = σ.z^2
+	///		S_xy = r.x * σ.x * σ.y
+	///		S_xz = r.y * σ.x * σ.z
+	///		S_yz = r.z * σ.y * σ.z
+	struct SGGX
+	{
+		ei::Vec<uint16, 3> σ;		///< Values in [0,1] discretized to 16 bit
+		ei::Vec<uint16, 3> r;		///< Values in [-1,1] discretized to 16 bit (the interval is shifted by *0.5-0.5 to fit the same format like σ)
+	};
+
+
 	class Chunk
 	{
 	public:
@@ -85,6 +102,7 @@ namespace bim {
 		const Node* getHierarchy() const			{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
 		const ei::Box* getHierarchyAABoxes() const	{ return m_aaBoxes.data(); }
 		const ei::UVec4* getLeafNodes() const		{ return m_hierarchyLeaves.data(); }
+		const SGGX* getNodeNDFs() const				{ return m_nodeNDFs.empty() ? nullptr : m_nodeNDFs.data();}
 
 		struct FullVertex
 		{
@@ -141,21 +159,6 @@ namespace bim {
 		void recomputeBVHOBoxes();
 		void recomputeBVHSpheres();
 
-		/// A simplification of a node by SGGX base function.
-		/// \details This stores the encoded entries of a symmetric matrix S:
-		///		σ = (sqrt(S_xx), sqrt(S_yy), sqrt(S_zz))
-		///		r = (S_xy/sqrt(S_xx S_yy), S_xz/sqrt(S_xx S_zz), S_yz/sqrt(S_yy S_zz))
-		///
-		///		To reconstruct the matrix do the following:
-		///		S_xx = σ.x^2    S_yy = σ.y^2    S_zz = σ.z^2
-		///		S_xy = r.x * σ.x * σ.y
-		///		S_xz = r.y * σ.x * σ.z
-		///		S_yz = r.z * σ.y * σ.z
-		struct SGGX
-		{
-			ei::Vec<uint16, 3> σ;		///< Values in [0,1] discretized to 16 bit
-			ei::Vec<uint16, 3> r;		///< Values in [-1,1] discretized to 16 bit (the interval is shifted by *0.5-0.5 to fit the same format like σ)
-		};
 		void computeBVHSGGXApproximations();
 
 	private: friend class BinaryModel;

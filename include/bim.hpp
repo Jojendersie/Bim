@@ -23,9 +23,10 @@ namespace bim {
 		/// \param [in] _bimFile Name of the binary file containing the scene graph
 		///		and mesh information.
 		/// \param [in] _envFile A JSON file with material and lighting information.
+		/// \param [in] _optionalProperties If existent load these properties, but do not create empty defaults.
 		///	\param [in] _loadAll Also load properties which are not requested.
 		/// \return true on success.
-		bool load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, bool _loadAll = false);
+		bool load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, Property::Val _optionalProperties = Property::DONT_CARE, bool _loadAll = false);
 		
 		/// Stores global information like material but without chunks.
 		void store(const char* _bimFile, const char* _envFile);
@@ -79,6 +80,7 @@ namespace bim {
 		std::vector<Material> m_materials;
 		std::vector<uint> m_materialIndirection;
 		Property::Val m_requestedProps;	///< All properties for which the getter should succeed.
+		Property::Val m_optionalProperties;
 		bool m_loadAll;					///< If a chunk is loaded, load all available data or only the required part
 		ei::Box m_boundingBox;
 	};

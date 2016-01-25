@@ -183,6 +183,8 @@ namespace bim {
 			m_aaBoxes.data(),
 			m_numTrianglesPerLeaf,
 			m_nodeNDFs);
+
+		m_properties = Property::Val(m_properties | Property::NDF_SGGX);
 	}
 
 

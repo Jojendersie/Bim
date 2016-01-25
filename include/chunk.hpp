@@ -33,7 +33,6 @@ namespace bim {
 			SPHERE_BVH		= 0x04000000,
 			HIERARCHY		= 0x08000000,	///< Node and Leaves array for the hierarchy
 			NDF_SGGX		= 0x10000000,	///< Normal distribution functions for the hierarchy in SGGX basis
-			HIERARCHY_MAT	= 0x20000000,	///< A set of material parameters for the hierarchy
 		};
 	};
 	

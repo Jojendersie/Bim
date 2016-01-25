@@ -173,9 +173,10 @@ namespace bim {
 		m_hierarchy.clear();
 		m_hierarchyLeaves.clear();
 		m_aaBoxes.clear();
-		m_properties = Property::Val(m_properties & ~(Property::HIERARCHY
-			| Property::HIERARCHY_MAT | Property::AABOX_BVH 
-			| Property::OBOX_BVH | Property::SPHERE_BVH | Property::NDF_SGGX));
+		m_nodeNDFs.clear();
+		m_properties = Property::Val(m_properties
+			& ~(Property::HIERARCHY | Property::AABOX_BVH 
+			  | Property::OBOX_BVH | Property::SPHERE_BVH | Property::NDF_SGGX));
 		m_numTreeLevels = 0;
 	}
 

@@ -147,7 +147,7 @@ namespace bim {
 		uint32 child = _hierarchy[_node].firstChild;
 		if(child & 0x80000000)
 		{
-			s = computeLeafSGGXBase(_positions, _normals, _leaves + (child & 0x7fffffff), _numTrianglesPerLeaf);
+			s = computeLeafSGGXBase(_positions, _normals, _leaves + (child & 0x7fffffff) * _numTrianglesPerLeaf, _numTrianglesPerLeaf);
 		} else {
 			s = computeBVHSGGXApproximationsRec(_positions, _normals, _hierarchy, child, _leaves, _aaBoxes, _numTrianglesPerLeaf, _output);
 			child = _hierarchy[child].escape;

@@ -119,12 +119,20 @@ namespace bim {
 		if(!m_colors.empty()) m_colors.resize(index);
 
 		// Rebuild index buffer
+		size_t numInvalidTriangles = 0;
 		for(size_t i = 0; i < m_triangles.size(); ++i)
 		{
-			m_triangles[i].x = indexToIndex[m_triangles[i].x];
-			m_triangles[i].y = indexToIndex[m_triangles[i].y];
-			m_triangles[i].z = indexToIndex[m_triangles[i].z];
+			if(m_triangles[i].x == m_triangles[i].y
+				|| m_triangles[i].x == m_triangles[i].z
+				|| m_triangles[i].y == m_triangles[i].z)
+				++numInvalidTriangles;
+			else {
+				m_triangles[i-numInvalidTriangles].x = indexToIndex[m_triangles[i].x];
+				m_triangles[i-numInvalidTriangles].y = indexToIndex[m_triangles[i].y];
+				m_triangles[i-numInvalidTriangles].z = indexToIndex[m_triangles[i].z];
+			}
 		}
+		m_triangles.resize(m_triangles.size() - numInvalidTriangles);
 	}
 
 	void Chunk::rebuildHierarchy(BuildMethod _method, uint _numTrianglesPerLeaf)

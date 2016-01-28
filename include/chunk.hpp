@@ -202,6 +202,7 @@ namespace bim {
 		// Returns the maximum tree depth.
 		uint remapNodePointers(uint32 _this, uint32 _parent, uint32 _escape);
 	};
+	inline const ei::Vec3& positionOf(const Chunk::FullVertex& _vertex) { return _vertex.position; }
 
 } // namespace bim
 

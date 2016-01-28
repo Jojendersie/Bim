@@ -1,4 +1,6 @@
 #include "bim.hpp"
+#include "hashgrid.hpp"
+//#include <iostream>
 
 namespace bim {
 
@@ -59,7 +61,8 @@ namespace bim {
 	{
 		invalidateHierarchy();
 
-		std::unordered_map<FullVertex, uint> vertexToIndex;
+		//std::unordered_map<FullVertex, uint> vertexToIndex;
+		HashGrid<3, FullVertex, uint32> vertexToIndex(m_boundingBox.min, m_boundingBox.max, ei::Vec3(1e-4f));
 		uint index = 0;
 		size_t numVertices = m_positions.size();
 		// Initialize the index mapping to index->self
@@ -72,22 +75,33 @@ namespace bim {
 			// Create a key
 			FullVertex key;
 			// Round properties (denoise) in vertices (otherwise hashing will miss many)
-			key.position = denoise(m_positions[i]);
-			if(!m_normals.empty()) key.normal = normalize(denoise(m_normals[i]));
-			if(!m_tangents.empty()) key.tangent = normalize(denoise(m_tangents[i]));
-			if(!m_bitangents.empty()) key.bitangent = normalize(denoise(m_bitangents[i]));
-			if(!m_qormals.empty()) key.qormal = m_qormals[i]; // TODO denoise
-			if(!m_texCoords0.empty()) key.texCoord0 = denoise(m_texCoords0[i]);
-			if(!m_texCoords1.empty()) key.texCoord1 = denoise(m_texCoords1[i]);
-			if(!m_texCoords2.empty()) key.texCoord2 = denoise(m_texCoords2[i]);
-			if(!m_texCoords3.empty()) key.texCoord3 = denoise(m_texCoords3[i]);
+			key.position = m_positions[i];
+			if(!m_normals.empty()) key.normal = m_normals[i];
+			if(!m_tangents.empty()) key.tangent = m_tangents[i];
+			if(!m_bitangents.empty()) key.bitangent = m_bitangents[i];
+			if(!m_qormals.empty()) key.qormal = m_qormals[i];
+			if(!m_texCoords0.empty()) key.texCoord0 = m_texCoords0[i];
+			if(!m_texCoords1.empty()) key.texCoord1 = m_texCoords1[i];
+			if(!m_texCoords2.empty()) key.texCoord2 = m_texCoords2[i];
+			if(!m_texCoords3.empty()) key.texCoord3 = m_texCoords3[i];
 			if(!m_colors.empty()) key.color = m_colors[i];
 			// Get the index
-			auto it = vertexToIndex.find(key);
-			if(it == vertexToIndex.end())
+			const uint32* it = vertexToIndex.find(key, [](const FullVertex& _lhs, const FullVertex& _rhs){
+				if(lensq(_lhs.position - _rhs.position) > 1e-8f) return false;
+				if(lensq(_lhs.normal - _rhs.normal) > 1e-6f) return false;
+				if(lensq(_lhs.tangent - _rhs.tangent) > 1e-6f) return false;
+				if(lensq(_lhs.bitangent - _rhs.bitangent) > 1e-6f) return false;
+				if(!approx(_lhs.qormal, _rhs.qormal)) return false;
+				if(lensq(_lhs.texCoord0 - _rhs.texCoord0) > 1e-6f) return false;
+				if(lensq(_lhs.texCoord1 - _rhs.texCoord1) > 1e-6f) return false;
+				if(lensq(_lhs.texCoord2 - _rhs.texCoord2) > 1e-6f) return false;
+				if(lensq(_lhs.texCoord3 - _rhs.texCoord3) > 1e-6f) return false;
+				return _lhs.color == _rhs.color;
+			});
+			if(!it)
 			{
 				// This is a new vertex -> keep (but move to index)
-				vertexToIndex[key] = index;
+				vertexToIndex.addPointFast(key, index);
 				indexToIndex[i] = index;
 				// Move data from i -> index
 				m_positions[index] = m_positions[i];
@@ -102,7 +116,7 @@ namespace bim {
 				if(!m_colors.empty()) m_colors[index] = m_colors[i];
 				++index;
 			} else {
-				indexToIndex[i] = it->second;
+				indexToIndex[i] = *it;
 			}
 		}
 		// All vertices we kept are moved to a block of size 'index'. The remaining
@@ -117,6 +131,7 @@ namespace bim {
 		if(!m_texCoords2.empty()) m_texCoords2.resize(index);
 		if(!m_texCoords3.empty()) m_texCoords3.resize(index);
 		if(!m_colors.empty()) m_colors.resize(index);
+		//std::cout<< "V: " << index << " / " << numVertices << '\n';
 
 		// Rebuild index buffer
 		size_t numInvalidTriangles = 0;
@@ -133,6 +148,7 @@ namespace bim {
 			}
 		}
 		m_triangles.resize(m_triangles.size() - numInvalidTriangles);
+		//std::cout << "T: " << numInvalidTriangles << '\n';
 	}
 
 	void Chunk::rebuildHierarchy(BuildMethod _method, uint _numTrianglesPerLeaf)

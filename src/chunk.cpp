@@ -137,9 +137,9 @@ namespace bim {
 		size_t numInvalidTriangles = 0;
 		for(size_t i = 0; i < m_triangles.size(); ++i)
 		{
-			if(m_triangles[i].x == m_triangles[i].y
-				|| m_triangles[i].x == m_triangles[i].z
-				|| m_triangles[i].y == m_triangles[i].z)
+			if(indexToIndex[m_triangles[i].x] == indexToIndex[m_triangles[i].y]
+				|| indexToIndex[m_triangles[i].x] == indexToIndex[m_triangles[i].z]
+				|| indexToIndex[m_triangles[i].y] == indexToIndex[m_triangles[i].z])
 				++numInvalidTriangles;
 			else {
 				m_triangles[i-numInvalidTriangles].x = indexToIndex[m_triangles[i].x];

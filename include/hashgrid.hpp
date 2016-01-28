@@ -30,7 +30,7 @@ namespace bim {
 		{
 			ei::Vec<float, N> domainSize = _domainMax - _domainMin;
 			m_gridSize = floor(domainSize / _gridSpacing) + 1;
-			m_domainToGrid = m_gridSize / domainSize;
+			m_domainToGrid = m_gridSize / (domainSize * 1.0001f);
 		}
 
 

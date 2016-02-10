@@ -100,6 +100,7 @@ namespace bim {
 		Node* getHierarchy()						{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
 		const Node* getHierarchy() const			{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
 		const ei::Box* getHierarchyAABoxes() const	{ return m_aaBoxes.data(); }
+		const ei::OBox* getHierarchyOBoxes() const	{ return m_oBoxes.data(); }
 		const ei::UVec4* getLeafNodes() const		{ return m_hierarchyLeaves.data(); }
 		const SGGX* getNodeNDFs() const				{ return m_nodeNDFs.empty() ? nullptr : m_nodeNDFs.data();}
 
@@ -180,6 +181,7 @@ namespace bim {
 		std::vector<Node> m_hierarchy;
 		std::vector<ei::UVec4> m_hierarchyLeaves;
 		std::vector<ei::Box> m_aaBoxes;
+		std::vector<ei::OBox> m_oBoxes;
 		std::vector<SGGX> m_nodeNDFs;
 		uint m_numTrianglesPerLeaf;
 		uint m_numTreeLevels;

@@ -51,6 +51,52 @@ namespace bim {
 
 
 
+	static void recomputeBVHOBoxesRec(const Vec3* _positions, const UVec4* _leaves, const Node* _hierarchy, std::vector<ei::Vec3>& _auxPos, OBox* _oBoxes, uint32 _node, uint _numTrianglesPerLeaf)
+	{
+		uint32 child = _hierarchy[_node].firstChild;
+		size_t firstPoint = _auxPos.size();
+		if(child & 0x80000000)
+		{
+			// Collect a list of points from all vertices in the leaves
+			size_t leafIdx = child & 0x7fffffff;
+			leafIdx *= _numTrianglesPerLeaf;
+			for(uint i = 0; i < _numTrianglesPerLeaf; ++i)
+			{
+				// There are invalid triangles if a node is not filled
+				if(_leaves[leafIdx+i].x == _leaves[leafIdx+i].y)
+					break;
+				_auxPos.push_back(_positions[_leaves[leafIdx+i].x]);
+				_auxPos.push_back(_positions[_leaves[leafIdx+i].y]);
+				_auxPos.push_back(_positions[_leaves[leafIdx+i].z]);
+			}
+		} else {
+			// Iterate through all siblings
+			recomputeBVHOBoxesRec(_positions, _leaves, _hierarchy, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
+			child = _hierarchy[child].escape;
+			while(_hierarchy[child].parent == _node && child != 0)
+			{
+				recomputeBVHOBoxesRec(_positions, _leaves, _hierarchy, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
+				child = _hierarchy[child].escape;
+			}
+		}
+		uint n = ei::convexSet(_auxPos.data() + firstPoint, uint32(_auxPos.size() - firstPoint));
+		_auxPos.resize(firstPoint + n);
+		_oBoxes[_node] = OBox(_auxPos.data() + firstPoint, n);
+	}
+
+	void Chunk::recomputeBVHOBoxes()
+	{
+		// Auxiliary buffer for positions, because the OBox build algorithm
+		// requires a thick packed list of vertices.
+		std::vector<ei::Vec3> points;
+		points.reserve(m_positions.size() * 6);
+		m_oBoxes.resize(m_hierarchy.size());
+		recomputeBVHOBoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), points, m_oBoxes.data(), 0, m_numTrianglesPerLeaf);
+		m_properties = Property::Val(m_properties | Property::OBOX_BVH);
+	}
+
+
+
 	const int NORMAL_SAMPLES = 1000;
 
 	// Linear interpolable values of the symmetric 3x3 matrix.

@@ -200,6 +200,7 @@ namespace bim {
 						case Property::HIERARCHY: loadFileChunk(m_file, header.size, m_chunks[idx].m_hierarchy, m_chunks[idx].m_properties, Property::HIERARCHY); break;
 						case HIERARCHY_LEAVES: loadFileChunk(m_file, header.size, m_chunks[idx].m_hierarchyLeaves, m_chunks[idx].m_properties, Property::DONT_CARE); break;
 						case Property::AABOX_BVH: loadFileChunk(m_file, header.size, m_chunks[idx].m_aaBoxes, m_chunks[idx].m_properties, Property::AABOX_BVH); break;
+						case Property::OBOX_BVH: loadFileChunk(m_file, header.size, m_chunks[idx].m_oBoxes, m_chunks[idx].m_properties, Property::OBOX_BVH); break;
 						case Property::NDF_SGGX: loadFileChunk(m_file, header.size, m_chunks[idx].m_nodeNDFs, m_chunks[idx].m_properties, Property::NDF_SGGX); break;
 						default: m_file.seekg(header.size, std::ios_base::cur);
 					}
@@ -287,6 +288,8 @@ namespace bim {
 							+ m_chunks[idx].m_hierarchyLeaves.size() * sizeof(ei::UVec4);
 		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			header.size += m_chunks[idx].m_aaBoxes.size() * sizeof(ei::Box) + sizeof(SectionHeader);
+		if(m_chunks[idx].m_properties & Property::OBOX_BVH)
+			header.size += m_chunks[idx].m_oBoxes.size() * sizeof(ei::OBox) + sizeof(SectionHeader);
 		if(m_chunks[idx].m_properties & Property::NDF_SGGX)
 			header.size += m_chunks[idx].m_nodeNDFs.size() * sizeof(SGGX) + sizeof(SectionHeader);
 		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
@@ -334,6 +337,8 @@ namespace bim {
 		}
 		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			storeFileChunk(file, Property::AABOX_BVH, m_chunks[idx].m_aaBoxes);
+		if(m_chunks[idx].m_properties & Property::OBOX_BVH)
+			storeFileChunk(file, Property::OBOX_BVH, m_chunks[idx].m_oBoxes);
 		if(m_chunks[idx].m_properties & Property::NDF_SGGX)
 			storeFileChunk(file, Property::NDF_SGGX, m_chunks[idx].m_nodeNDFs);
 	}

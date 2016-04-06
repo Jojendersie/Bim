@@ -1,7 +1,9 @@
 #include "bim.hpp"
 #include "json.hpp"
+#include "../deps/miniz.c"
 #include <fstream>
 #include <iostream>
+#include <memory>
 
 namespace bim {
 
@@ -9,6 +11,7 @@ namespace bim {
 	{
 		uint32 type;	// BinaryModel::Property::Val + extra values
 		uint64 size;	// Block size of following data
+		uint64 uncompressedSize;	// Size of the data after decompression (INFLATE) or 0 if data is not compressed.
 	};
 
 	// Non powers of 2 are free to use (others are reserved for Property::...)
@@ -118,6 +121,7 @@ namespace bim {
 		std::ofstream file(_bimFile, std::ios_base::binary | std::ios_base::out);
 		if(m_file.bad()) {std::cerr << "Cannot open file for writing!\n"; return;}
 		SectionHeader header;
+		header.uncompressedSize = 0;
 	
 		header.type = META_SECTION;
 		header.size = sizeof(MetaSection);
@@ -149,12 +153,35 @@ namespace bim {
 	}
 
 	template<typename T>
-	static void loadFileChunk(std::ifstream& _file, uint64 _size, std::vector<T>& _data, Property::Val& _chunkProp, Property::Val _newProp)
+	static void loadFileChunk(std::ifstream& _file, const SectionHeader& _header, std::vector<T>& _data, Property::Val& _chunkProp, Property::Val _newProp)
 	{
-		// ASSERT: _size % sizeof(T) == 0
-		// Reserve the exact amount of memory
-		swap(_data, std::vector<T>(_size / sizeof(T)));
-		_file.read(reinterpret_cast<char*>(_data.data()), _size);
+		if(_header.uncompressedSize)
+		{
+			if(_header.uncompressedSize % sizeof(T) != 0) {
+				std::cerr << "Error while loading a chunk: data size is incompatible with data type.\n";
+				return;
+			}
+			// Reserve the exact amount of memory
+			swap(_data, std::vector<T>(_header.uncompressedSize / sizeof(T)));
+			std::unique_ptr<byte[]> compressedBuffer(new byte[_header.size]);
+			_file.read(reinterpret_cast<char*>(compressedBuffer.get()), _header.size);
+
+			mz_ulong size = (mz_ulong)_header.uncompressedSize;
+			int r = uncompress(reinterpret_cast<byte*>(_data.data()), &size, compressedBuffer.get(), (mz_ulong)_header.size);
+			if(r != Z_OK || _header.uncompressedSize != size) {
+				std::cerr << "Error in chunk decompression.\n";
+				// TODO : more information
+				return;
+			}
+		} else {
+			if(_header.size % sizeof(T) != 0) {
+				std::cerr << "Error while loading a chunk: data size is incompatible with data type.\n";
+				return;
+			}
+			// Reserve the exact amount of memory
+			swap(_data, std::vector<T>(_header.size / sizeof(T)));
+			_file.read(reinterpret_cast<char*>(_data.data()), _header.size);
+		}
 		_chunkProp = Property::Val(_chunkProp | _newProp);
 	}
 
@@ -185,23 +212,23 @@ namespace bim {
 							m_chunks[idx].m_numTrianglesPerLeaf = meta.m_numTrianglesPerLeaf;
 							m_chunks[idx].m_numTreeLevels = meta.m_numTreeLevels;
 							break; }
-						case Property::POSITION: loadFileChunk(m_file, header.size, m_chunks[idx].m_positions, m_chunks[idx].m_properties, Property::POSITION); break;
-						case Property::NORMAL: loadFileChunk(m_file, header.size, m_chunks[idx].m_normals, m_chunks[idx].m_properties, Property::NORMAL); break;
-						case Property::TANGENT: loadFileChunk(m_file, header.size, m_chunks[idx].m_tangents, m_chunks[idx].m_properties, Property::TANGENT); break;
-						case Property::BITANGENT: loadFileChunk(m_file, header.size, m_chunks[idx].m_bitangents, m_chunks[idx].m_properties, Property::BITANGENT); break;
-						case Property::QORMAL: loadFileChunk(m_file, header.size, m_chunks[idx].m_qormals, m_chunks[idx].m_properties, Property::QORMAL); break;
-						case Property::TEXCOORD0: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords0, m_chunks[idx].m_properties, Property::TEXCOORD0); break;
-						case Property::TEXCOORD1: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords1, m_chunks[idx].m_properties, Property::TEXCOORD1); break;
-						case Property::TEXCOORD2: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords2, m_chunks[idx].m_properties, Property::TEXCOORD2); break;
-						case Property::TEXCOORD3: loadFileChunk(m_file, header.size, m_chunks[idx].m_texCoords3, m_chunks[idx].m_properties, Property::TEXCOORD3); break;
-						case Property::COLOR: loadFileChunk(m_file, header.size, m_chunks[idx].m_colors, m_chunks[idx].m_properties, Property::COLOR); break;
-						case Property::TRIANGLE_IDX: loadFileChunk(m_file, header.size, m_chunks[idx].m_triangles, m_chunks[idx].m_properties, Property::TRIANGLE_IDX); break;
-						case Property::TRIANGLE_MAT: loadFileChunk(m_file, header.size, m_chunks[idx].m_triangleMaterials, m_chunks[idx].m_properties, Property::TRIANGLE_MAT); break;
-						case Property::HIERARCHY: loadFileChunk(m_file, header.size, m_chunks[idx].m_hierarchy, m_chunks[idx].m_properties, Property::HIERARCHY); break;
-						case HIERARCHY_LEAVES: loadFileChunk(m_file, header.size, m_chunks[idx].m_hierarchyLeaves, m_chunks[idx].m_properties, Property::DONT_CARE); break;
-						case Property::AABOX_BVH: loadFileChunk(m_file, header.size, m_chunks[idx].m_aaBoxes, m_chunks[idx].m_properties, Property::AABOX_BVH); break;
-						case Property::OBOX_BVH: loadFileChunk(m_file, header.size, m_chunks[idx].m_oBoxes, m_chunks[idx].m_properties, Property::OBOX_BVH); break;
-						case Property::NDF_SGGX: loadFileChunk(m_file, header.size, m_chunks[idx].m_nodeNDFs, m_chunks[idx].m_properties, Property::NDF_SGGX); break;
+						case Property::POSITION: loadFileChunk(m_file, header, m_chunks[idx].m_positions, m_chunks[idx].m_properties, Property::POSITION); break;
+						case Property::NORMAL: loadFileChunk(m_file, header, m_chunks[idx].m_normals, m_chunks[idx].m_properties, Property::NORMAL); break;
+						case Property::TANGENT: loadFileChunk(m_file, header, m_chunks[idx].m_tangents, m_chunks[idx].m_properties, Property::TANGENT); break;
+						case Property::BITANGENT: loadFileChunk(m_file, header, m_chunks[idx].m_bitangents, m_chunks[idx].m_properties, Property::BITANGENT); break;
+						case Property::QORMAL: loadFileChunk(m_file, header, m_chunks[idx].m_qormals, m_chunks[idx].m_properties, Property::QORMAL); break;
+						case Property::TEXCOORD0: loadFileChunk(m_file, header, m_chunks[idx].m_texCoords0, m_chunks[idx].m_properties, Property::TEXCOORD0); break;
+						case Property::TEXCOORD1: loadFileChunk(m_file, header, m_chunks[idx].m_texCoords1, m_chunks[idx].m_properties, Property::TEXCOORD1); break;
+						case Property::TEXCOORD2: loadFileChunk(m_file, header, m_chunks[idx].m_texCoords2, m_chunks[idx].m_properties, Property::TEXCOORD2); break;
+						case Property::TEXCOORD3: loadFileChunk(m_file, header, m_chunks[idx].m_texCoords3, m_chunks[idx].m_properties, Property::TEXCOORD3); break;
+						case Property::COLOR: loadFileChunk(m_file, header, m_chunks[idx].m_colors, m_chunks[idx].m_properties, Property::COLOR); break;
+						case Property::TRIANGLE_IDX: loadFileChunk(m_file, header, m_chunks[idx].m_triangles, m_chunks[idx].m_properties, Property::TRIANGLE_IDX); break;
+						case Property::TRIANGLE_MAT: loadFileChunk(m_file, header, m_chunks[idx].m_triangleMaterials, m_chunks[idx].m_properties, Property::TRIANGLE_MAT); break;
+						case Property::HIERARCHY: loadFileChunk(m_file, header, m_chunks[idx].m_hierarchy, m_chunks[idx].m_properties, Property::HIERARCHY); break;
+						case HIERARCHY_LEAVES: loadFileChunk(m_file, header, m_chunks[idx].m_hierarchyLeaves, m_chunks[idx].m_properties, Property::DONT_CARE); break;
+						case Property::AABOX_BVH: loadFileChunk(m_file, header, m_chunks[idx].m_aaBoxes, m_chunks[idx].m_properties, Property::AABOX_BVH); break;
+						case Property::OBOX_BVH: loadFileChunk(m_file, header, m_chunks[idx].m_oBoxes, m_chunks[idx].m_properties, Property::OBOX_BVH); break;
+						case Property::NDF_SGGX: loadFileChunk(m_file, header, m_chunks[idx].m_nodeNDFs, m_chunks[idx].m_properties, Property::NDF_SGGX); break;
 						default: m_file.seekg(header.size, std::ios_base::cur);
 					}
 				} else m_file.seekg(header.size, std::ios_base::cur);
@@ -246,9 +273,21 @@ namespace bim {
 	{
 		SectionHeader header;
 		header.type = _type;
-		header.size = _data.size() * sizeof(T);
+		header.uncompressedSize = _data.size() * sizeof(T);
+
+		// Compress data
+		mz_ulong compressedSize = compressBound((mz_ulong)header.uncompressedSize);
+		std::unique_ptr<byte[]> compressedBuffer = std::make_unique<byte[]>(compressedSize);
+		int r = compress2(compressedBuffer.get(), &compressedSize, reinterpret_cast<const byte*>(_data.data()), (mz_ulong)header.uncompressedSize, 6);
+		if(r != Z_OK) {
+			std::cerr << "Failed to compress a data chunk!\n";
+			return;
+		}
+		header.size = compressedSize;
+
 		_file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
-		_file.write(reinterpret_cast<const char*>(_data.data()), header.size);
+		//_file.write(reinterpret_cast<const char*>(_data.data()), header.size);
+		_file.write(reinterpret_cast<const char*>(compressedBuffer.get()), header.size);
 	}
 
 	void BinaryModel::storeChunk(const char* _bimFile, const ei::IVec3& _chunkPos)

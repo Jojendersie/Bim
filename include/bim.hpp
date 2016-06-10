@@ -59,6 +59,8 @@ namespace bim {
 		const Material& getMaterial(uint _index) const { return m_materials[m_materialIndirection[_index]]; }
 		void addMaterial(const Material& _material);
 		uint getNumMaterials() const { return (uint)m_materials.size(); }
+		/// Get the index of a named material. If the material is not found -1 is returned.
+		int findMaterial(const std::string& _name);
 
 		const ei::Box& getBoundingBox() const { return m_boundingBox; }
 	private:

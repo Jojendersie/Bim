@@ -30,6 +30,16 @@ namespace bim {
 		m_materials.push_back(_material);
 	}
 
+	int BinaryModel::findMaterial(const std::string& _name)
+	{
+		for(size_t i = 0; i < m_materialIndirection.size(); ++i)
+		{
+			if(m_materials[m_materialIndirection[i]].getName() == _name)
+				return (int)i;
+		}
+		return -1;
+	}
+
 	void BinaryModel::split(const ei::IVec3& _numChunks)
 	{
 	}

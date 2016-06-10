@@ -57,8 +57,9 @@ bool loadScene(const std::string& _fileName, Assimp::Importer& _importer)
 	return _importer.GetScene() != nullptr;
 }
 
-void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4& _transformation, bim::Chunk& _bim)
+void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4& _transformation, bim::BinaryModel& _bim)
 {
+	bim::Chunk& chunk = *_bim.getChunk(ei::IVec3(0));
 	// Compute scene graph transformation
 	ei::Mat4x4 nodeTransform; memcpy(&nodeTransform, &_node->mTransformation, sizeof(ei::Mat4x4));
 	nodeTransform *= _transformation;
@@ -73,14 +74,11 @@ void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4
 
 		// Find the material entry
 		uint32 materialIndex = 0;
-		/*aiString aiName;
+		aiString aiName;
 		_scene->mMaterials[mesh->mMaterialIndex]->Get( AI_MATKEY_NAME, aiName );
-		std::string materialName = aiName.C_Str();
-		while(materialIndex < m_materials.RootNode.Size()
-			&& m_materials.RootNode[materialIndex].GetName() != materialName)
-			++materialIndex;
-		if( materialIndex == m_materials.RootNode.Size() )
-			std::cerr << "Could not find the mesh material" << std::endl;*/
+		int mi = _bim.findMaterial(aiName.C_Str());
+		if(mi > 0) materialIndex = mi;
+		else std::cerr << "WAR: Could not find the mesh material " << aiName.C_Str() << "!\n";
 
 		// Import and transform the geometry
 		for(uint t = 0; t < mesh->mNumFaces; ++t)
@@ -109,16 +107,90 @@ void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4
 				if(mesh->HasTextureCoords(3)) memcpy(&newVertex.texCoord3, &mesh->mTextureCoords[3][face.mIndices[j]], sizeof(ei::Vec2));
 				if(mesh->HasVertexColors(0)) memcpy(&newVertex.color, &mesh->mColors[0][face.mIndices[j]], sizeof(ei::Vec2));
 				// Add vertex and get its index for the triangle
-				triangleIndices[j] = _bim.getNumVertices();
-				_bim.addVertex(newVertex);
+				triangleIndices[j] = chunk.getNumVertices();
+				chunk.addVertex(newVertex);
 			}
-			_bim.addTriangle(triangleIndices, materialIndex);
+			chunk.addTriangle(triangleIndices, materialIndex);
 		}
 	}
 
 	// Import all child nodes
 	for(uint i = 0; i < _node->mNumChildren; ++i)
 		importGeometry(_scene, _node->mChildren[i], nodeTransform, _bim);
+}
+
+void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
+{
+	if( !_scene->HasMaterials() )
+	{
+		std::cerr << "ERR: The scene has no materials to import!\n";
+		return;
+	}
+
+	for(uint i = 0; i < _scene->mNumMaterials; ++i)
+	{
+		auto mat = _scene->mMaterials[i];
+		aiString aiTmpStr;
+		// Get name and create new material with that name
+		mat->Get( AI_MATKEY_NAME, aiTmpStr );
+		bim::Material material(aiTmpStr.C_Str());
+
+		// Check if the material was imported before
+		if(_bim.findMaterial(material.getName()) != -1)
+			continue;
+
+		// Load diffuse
+		if( mat->GetTexture( aiTextureType_DIFFUSE, 0, &aiTmpStr ) == AI_SUCCESS )
+		{
+			material.setTexture("albedo", aiTmpStr.C_Str());
+		} else {
+			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
+			mat->Get( AI_MATKEY_COLOR_DIFFUSE, color );
+			material.set("albedo", ei::Vec4(color.r, color.g, color.b, 0.0f));
+		}
+
+		// Load specular
+		// TODO: roughness?
+		if( mat->GetTexture( aiTextureType_SPECULAR, 0, &aiTmpStr ) == AI_SUCCESS )
+		{
+			material.setTexture("specularColor", aiTmpStr.C_Str());
+		} else {
+			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
+			if( mat->Get( AI_MATKEY_COLOR_REFLECTIVE, color ) != AI_SUCCESS )
+				mat->Get( AI_MATKEY_COLOR_SPECULAR, color );
+			material.set("specularColor", ei::Vec4(color.r, color.g, color.b, 0.0f));
+		}
+		if( mat->GetTexture( aiTextureType_SHININESS, 0, &aiTmpStr ) == AI_SUCCESS )
+		{
+			material.setTexture("shininess", aiTmpStr.C_Str());
+		} else {
+			float shininess = 1.0f;
+			mat->Get( AI_MATKEY_SHININESS, shininess );
+			material.set("shininess", ei::Vec4(shininess, 0.0f, 0.0f, 0.0f));
+		}
+
+		// Load opacity
+		if( mat->GetTexture( aiTextureType_OPACITY, 0, &aiTmpStr ) == AI_SUCCESS )
+		{
+			material.setTexture("opacity", aiTmpStr.C_Str());
+		} else {
+			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
+			mat->Get( AI_MATKEY_OPACITY, color );
+			material.set("opacity", ei::Vec4(color.r, color.g, color.b, 0.0f));
+		}
+
+		// Load emissivity
+		if( mat->GetTexture( aiTextureType_EMISSIVE, 0, &aiTmpStr ) == AI_SUCCESS )
+		{
+			material.setTexture("emissivity", aiTmpStr.C_Str());
+		} else {
+			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
+			mat->Get( AI_MATKEY_COLOR_EMISSIVE, color );
+			material.set("emissivity", ei::Vec4(color.r, color.g, color.b, 0.0f));
+		}
+
+		_bim.addMaterial(material);
+	}
 }
 
 int main(int _numArgs, const char** _args)
@@ -196,8 +268,10 @@ int main(int _numArgs, const char** _args)
 	std::cerr << "    Triangles: " << numTriangles << '\n';
 	bim::BinaryModel model(properties);
 	// Fill the model with data
+	std::cerr << "INF: importing materials...\n";
+	importMaterials(importer.GetScene(), model);
 	std::cerr << "INF: importing geometry...\n";
-	importGeometry(importer.GetScene(), importer.GetScene()->mRootNode, ei::identity4x4(), *model.getChunk(ei::IVec3(0)));
+	importGeometry(importer.GetScene(), importer.GetScene()->mRootNode, ei::identity4x4(), model);
 	importer.FreeScene();
 	// Compute additional data
 	std::cerr << "INF: recomputing bounding box...\n";

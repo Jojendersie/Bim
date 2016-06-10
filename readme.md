@@ -38,7 +38,7 @@ An example for a JSON file looks as follows:
 	{
 		"materials": {
 			"diffusegrey": {
-				"albedo": [0.5, 0.5, 0.5],
+				"albedo": [0.5, 0.5, 0.5, 0.0],
 				"albedo": "grey.png"
 			}
 		}

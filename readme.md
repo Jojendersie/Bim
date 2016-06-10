@@ -40,7 +40,7 @@ An example for a JSON file looks as follows:
 			"diffusegrey": {
 				"albedo": [0.5, 0.5, 0.5],
 				"albedo": "grey.png"
-			} 
+			}
 		}
 		"lights": {
 			<NOT SPECIFIED YET>
@@ -48,3 +48,24 @@ An example for a JSON file looks as follows:
 	}
 
 Thereby, materials can define any list of properties. A property must always be a list of up to four floats or a string for texture names. It is possible to use the same name twice, once for a texture and once for a value list.
+
+
+----------
+
+# Tools #
+
+Currently there is one tool which uses the Assimp import library to convert almost any scene into a bim and a json file. It is simply called *tobim* and is a command line tool with the following options. Each option must be free of white spaces or set into "".
+
+    -i<input file>      The input 3d model - should be loadable with Assimp
+    -o<output file>     A name for the output without the suffix (.bim). If not
+                        given the name of the input scene will be used.
+    -g<X>,<Y>,<Z>       The resolution of the chunk grid. The scene is divided
+                        into chunks by the uniform grid. The default is (1,1,1).
+    -bAAB               Build BVH with axis aligned boxes. It is possible to
+                        set multiple -b options.
+    -bOB                Build BVH with oriented boxes. It is possible to set
+                        multiple -b options.
+    -mSAH               Use BVH build method with surface area heuristic.
+    -mKD                Use BVH build method with axis aligned kd-tree.
+    -cSGGX              Compute SGGX normal distributions for the nodes in the
+                        hierarchy.

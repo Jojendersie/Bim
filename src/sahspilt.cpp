@@ -64,8 +64,8 @@ namespace bim {
 		}
 		cov /= _max - _min; // div n-1 for unbiased variance
 
-							// Get the largest eigenvalues' vector, this is the direction with the largest
-							// Geometry deviation. Split in this direction.
+		// Get the largest eigenvalues' vector, this is the direction with the largest
+		// Geometry deviation. Split in this direction.
 		Mat3x3 Q;
 		Vec3 λ;
 		decomposeQl( cov, Q, λ, false );

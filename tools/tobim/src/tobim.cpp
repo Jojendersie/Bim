@@ -1,4 +1,9 @@
 #include <assimp/DefaultLogger.hpp>
+#include <assimp/matrix4x4.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/material.h>
+#include <assimp/Importer.hpp>
 #include <iostream>
 #include <string>
 //#include <algorithm>
@@ -20,6 +25,101 @@ class LogErrStream: public Assimp::LogStream {
 };
 
 
+bool loadScene(const std::string& _fileName, Assimp::Importer& _importer)
+{
+	// Initialize Assimp logger
+	Assimp::DefaultLogger::create("", Assimp::Logger::VERBOSE);
+//	Assimp::DefaultLogger::get()->attachStream( new LogDebugStream, Assimp::Logger::Debugging);
+	Assimp::DefaultLogger::get()->attachStream( new LogInfoStream, Assimp::Logger::Info);
+	Assimp::DefaultLogger::get()->attachStream( new LogWarnStream, Assimp::Logger::Warn);
+	Assimp::DefaultLogger::get()->attachStream( new LogErrStream, Assimp::Logger::Err);
+
+	// Ignore line/point primitives
+	_importer.SetPropertyInteger( AI_CONFIG_PP_SBP_REMOVE,
+		aiPrimitiveType_POINT | aiPrimitiveType_LINE );
+
+	_importer.ReadFile( _fileName,
+		aiProcess_GenSmoothNormals		|
+		aiProcess_CalcTangentSpace		|
+		aiProcess_Triangulate			|
+		//aiProcess_GenSmoothNormals		|	// TODO: is angle 80% already set?
+		aiProcess_ValidateDataStructure	|
+		aiProcess_SortByPType			|
+		//aiProcess_RemoveRedundantMaterials	|
+		//aiProcess_FixInfacingNormals	|
+		aiProcess_FindInvalidData		|
+		aiProcess_GenUVCoords			|
+		aiProcess_TransformUVCoords		|
+		aiProcess_ImproveCacheLocality	|
+		aiProcess_JoinIdenticalVertices	|
+		aiProcess_FlipUVs );
+
+	return _importer.GetScene() != nullptr;
+}
+
+void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4& _transformation, bim::Chunk& _bim)
+{
+	// Compute scene graph transformation
+	ei::Mat4x4 nodeTransform; memcpy(&nodeTransform, &_node->mTransformation, sizeof(ei::Mat4x4));
+	nodeTransform *= _transformation;
+	ei::Mat3x3 invTransTransform(nodeTransform);
+	invTransTransform = transpose(invert(invTransTransform));
+
+	// Import meshes
+	for(uint i = 0; i < _node->mNumMeshes; ++i)
+	{
+		const aiMesh* mesh = _scene->mMeshes[ _node->mMeshes[i] ];
+		bim::Chunk::FullVertex newVertex;
+
+		// Find the material entry
+		uint32 materialIndex = 0;
+		/*aiString aiName;
+		_scene->mMaterials[mesh->mMaterialIndex]->Get( AI_MATKEY_NAME, aiName );
+		std::string materialName = aiName.C_Str();
+		while(materialIndex < m_materials.RootNode.Size()
+			&& m_materials.RootNode[materialIndex].GetName() != materialName)
+			++materialIndex;
+		if( materialIndex == m_materials.RootNode.Size() )
+			std::cerr << "Could not find the mesh material" << std::endl;*/
+
+		// Import and transform the geometry
+		for(uint t = 0; t < mesh->mNumFaces; ++t)
+		{
+			const aiFace& face = mesh->mFaces[t];
+			eiAssert( face.mNumIndices == 3, "This is a triangle importer!" );
+			ei::UVec3 triangleIndices;
+			for(int j = 0; j < 3; ++j)
+			{
+				// Fill the vertex
+				ei::Vec3 tmp;
+				memcpy(&tmp, &mesh->mVertices[face.mIndices[j]], sizeof(ei::Vec3));
+				newVertex.position = ei::transform(tmp, nodeTransform);
+				memcpy(&tmp, &mesh->mNormals[face.mIndices[j]], sizeof(ei::Vec3));
+				newVertex.normal = ei::transform(tmp, invTransTransform);
+				if(mesh->HasTangentsAndBitangents())
+				{
+					memcpy(&tmp, &mesh->mTangents[face.mIndices[j]], sizeof(ei::Vec3));
+					newVertex.tangent = ei::transform(tmp, invTransTransform);
+					memcpy(&tmp, &mesh->mBitangents[face.mIndices[j]], sizeof(ei::Vec3));
+					newVertex.bitangent = ei::transform(tmp, invTransTransform);
+				}
+				if(mesh->HasTextureCoords(0)) memcpy(&newVertex.texCoord0, &mesh->mTextureCoords[0][face.mIndices[j]], sizeof(ei::Vec2));
+				if(mesh->HasTextureCoords(1)) memcpy(&newVertex.texCoord1, &mesh->mTextureCoords[1][face.mIndices[j]], sizeof(ei::Vec2));
+				if(mesh->HasTextureCoords(2)) memcpy(&newVertex.texCoord2, &mesh->mTextureCoords[2][face.mIndices[j]], sizeof(ei::Vec2));
+				if(mesh->HasTextureCoords(3)) memcpy(&newVertex.texCoord3, &mesh->mTextureCoords[3][face.mIndices[j]], sizeof(ei::Vec2));
+				if(mesh->HasVertexColors(0)) memcpy(&newVertex.color, &mesh->mColors[0][face.mIndices[j]], sizeof(ei::Vec2));
+				// Add vertex and get its index for the triangle
+				triangleIndices[j] = _bim.getNumVertices();
+				_bim.addVertex(newVertex);
+			}
+			_bim.addTriangle(triangleIndices, materialIndex);
+		}
+	}
+
+	// Import all child nodes
+	for(uint i = 0; i < _node->mNumChildren; ++i)
+		importGeometry(_scene, _node->mChildren[i], nodeTransform, _bim);
+}
 
 int main(int _numArgs, const char** _args)
 {
@@ -58,17 +158,75 @@ int main(int _numArgs, const char** _args)
 	if(any(chunkGridRes < 1)) { std::cerr << "ERR: Invalid grid resolution!\n"; return 1; }
 
 	// Derive output file name
+	std::string outputBimFile, outputJsonFile;
 	if(outputFileName.empty())
 	{
 		outputFileName = inputModelFile.substr(0, inputModelFile.find_last_of('.'));
+		outputBimFile = outputFileName + ".bim";
+		outputJsonFile = outputFileName + ".json";
 	}
 
-	// Initialize Assimp logger
-	Assimp::DefaultLogger::create("", Assimp::Logger::VERBOSE);
-	Assimp::DefaultLogger::get()->attachStream( new LogDebugStream, Assimp::Logger::Debugging);
-	Assimp::DefaultLogger::get()->attachStream( new LogInfoStream, Assimp::Logger::Info);
-	Assimp::DefaultLogger::get()->attachStream( new LogWarnStream, Assimp::Logger::Warn);
-	Assimp::DefaultLogger::get()->attachStream( new LogErrStream, Assimp::Logger::Err);
+	// Import Assimp scene
+	Assimp::Importer importer;
+	if(!loadScene(inputModelFile, importer)) { std::cerr << "ERR: Failed to import the scene with assimp."; return 1; }
+	std::cerr << "INF: Finished Assimp loading\n";
+	std::cerr << "    Meshes: " << importer.GetScene()->mNumMeshes << '\n';
+	std::cerr << "    Materials: " << importer.GetScene()->mNumMaterials << '\n';
 
+	// Analyze input data to create a proper model
+	bim::Property::Val properties = bim::Property::Val(bim::Property::POSITION | bim::Property::TRIANGLE_IDX | bim::Property::TRIANGLE_MAT);
+	uint numVertices = 0;
+	uint numTriangles = 0;
+	for(uint i = 0; i < importer.GetScene()->mNumMeshes; ++i)
+	{
+		auto mesh = importer.GetScene()->mMeshes[i];
+		if( mesh->GetNumUVChannels() > 0 ) properties = bim::Property::Val(properties | bim::Property::TEXCOORD0);
+		if( mesh->GetNumUVChannels() > 1 ) properties = bim::Property::Val(properties | bim::Property::TEXCOORD1);
+		if( mesh->GetNumUVChannels() > 2 ) properties = bim::Property::Val(properties | bim::Property::TEXCOORD2);
+		if( mesh->GetNumUVChannels() > 3 ) properties = bim::Property::Val(properties | bim::Property::TEXCOORD3);
+		if( mesh->GetNumColorChannels() > 0 ) properties = bim::Property::Val(properties | bim::Property::COLOR);
+		if( mesh->HasNormals() ) properties = bim::Property::Val(properties | bim::Property::NORMAL);
+		if( mesh->HasTangentsAndBitangents() ) properties = bim::Property::Val(properties | bim::Property::TANGENT | bim::Property::BITANGENT );
+		// TODO: Qormals
+
+		numVertices += mesh->mNumVertices;
+		numTriangles += mesh->mNumFaces;
+	}
+	std::cerr << "    Vertices: " << numVertices << '\n';
+	std::cerr << "    Triangles: " << numTriangles << '\n';
+	bim::BinaryModel model(properties);
+	// Fill the model with data
+	std::cerr << "INF: importing geometry...\n";
+	importGeometry(importer.GetScene(), importer.GetScene()->mRootNode, ei::identity4x4(), *model.getChunk(ei::IVec3(0)));
+	importer.FreeScene();
+	// Compute additional data
+	std::cerr << "INF: recomputing bounding box...\n";
+	model.refreshBoundingBox();
+	if(prod(chunkGridRes) > 1)
+	{
+		std::cerr << "INF: dividing into chunks...\n";
+		model.split(chunkGridRes);
+	}
+	//foreach chunk
+	{
+		std::cerr << "INF: building BVH...\n";
+		model.getChunk(ei::IVec3(0))->rebuildHierarchy(method, 8);
+		if(computeAAB) {
+			std::cerr << "INF: computing AABoxes...\n";
+			model.getChunk(ei::IVec3(0))->recomputeBVHAABoxes();
+		}
+		if(computeOB) {
+			std::cerr << "INF: computing OBoxes...\n";
+			model.getChunk(ei::IVec3(0))->recomputeBVHOBoxes();
+		}
+		if(computeSGGX) {
+			std::cerr << "INF: computing SGGX NDFs...\n";
+			model.getChunk(ei::IVec3(0))->computeBVHSGGXApproximations();
+		}
+	}
+	std::cerr << "INF: storing model...\n";
+	model.store(outputBimFile.c_str(), outputJsonFile.c_str());
+	//foreach chunk
+	model.storeChunk(outputBimFile.c_str(), ei::IVec3(0));
 	return 0;
 }

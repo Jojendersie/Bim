@@ -5,6 +5,31 @@
 #include <iostream>
 #include <memory>
 
+static const char* propertyString(bim::Property::Val _prop)
+{
+	switch(_prop)
+	{
+		case bim::Property::POSITION: return "POSITION";
+		case bim::Property::NORMAL: return "NORMAL";
+		case bim::Property::TANGENT: return "TANGENT";
+		case bim::Property::BITANGENT: return "BITANGENT";
+		case bim::Property::QORMAL: return "QORMAL";
+		case bim::Property::TEXCOORD0: return "TEXCOORD1";
+		case bim::Property::TEXCOORD1: return "POSITION";
+		case bim::Property::TEXCOORD2: return "TEXCOORD2";
+		case bim::Property::TEXCOORD3: return "TEXCOORD3";
+		case bim::Property::COLOR: return "COLOR";
+		case bim::Property::TRIANGLE_IDX: return "TRIANGLE_IDX";
+		case bim::Property::TRIANGLE_MAT: return "TRIANGLE_MAT";
+		case bim::Property::AABOX_BVH: return "AABOX_BVH";
+		case bim::Property::OBOX_BVH: return "OBOX_BVH";
+		case bim::Property::SPHERE_BVH: return "SPHERE_BVH";
+		case bim::Property::HIERARCHY: return "HIERARCHY";
+		case bim::Property::NDF_SGGX: return "NDF_SGGX";
+		default: return "UNKNOWN";
+	}
+}
+
 namespace bim {
 
 	struct SectionHeader
@@ -237,12 +262,15 @@ namespace bim {
 			if((m_requestedProps & m_chunks[idx].m_properties) != m_requestedProps)
 			{
 				// Warn here, but continue. Missing properties are filled by defaults.
-				std::cerr << "File does not contain the requested properties!\n";
+				std::cerr << "File does not contain the requested properties! Missing:\n";
 				// Fill in the missing chunk properties
 				Property::Val missing = Property::Val(m_requestedProps ^ (m_requestedProps & m_chunks[idx].m_properties));
 				for(uint32 i = 1; i != 0; i<<=1)
 					if(missing & i)
+					{
 						m_chunks[idx].addProperty(Property::Val(i));
+						std::cerr << "    " << propertyString(Property::Val(i)) << '\n';
+					}
 			}
 	
 			m_chunkStates[idx] = ChunkState::LOADED;

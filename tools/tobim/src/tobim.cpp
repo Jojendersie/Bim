@@ -284,7 +284,7 @@ int main(int _numArgs, const char** _args)
 	//foreach chunk
 	{
 		std::cerr << "INF: building BVH...\n";
-		model.getChunk(ei::IVec3(0))->rebuildHierarchy(method, 8);
+		model.getChunk(ei::IVec3(0))->rebuildHierarchy(method, 4);
 		if(computeAAB) {
 			std::cerr << "INF: computing AABoxes...\n";
 			model.getChunk(ei::IVec3(0))->recomputeBVHAABoxes();

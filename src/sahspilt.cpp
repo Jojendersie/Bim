@@ -9,7 +9,7 @@ namespace bim {
 	struct SAHBuildInfo
 	{
 		std::vector<Node>& hierarchy;
-		std::vector<UVec4>& leaves;
+		std::vector<uint32>& leaves;
 		const std::vector<Vec3>& positions;
 		const std::vector<UVec3>& triangles;
 		const std::vector<uint32>& materials;
@@ -37,14 +37,14 @@ namespace bim {
 			size_t leafIdx = _in.leaves.size();
 			_in.leaves.resize(_in.leaves.size() + _in.numTrianglesPerLeaf);
 			// Fill it
-			UVec4* trianglesPtr = &_in.leaves[leafIdx];
+			uint32* trianglesPtr = &_in.leaves[leafIdx];
 			for( uint i = _min; i <= _max; ++i )
-				*(trianglesPtr++) = UVec4( _in.triangles[_in.sortedIDs[i]], _in.materials.empty() ? 0 : _in.materials[_in.sortedIDs[i]] );
+				*(trianglesPtr++) = _in.sortedIDs[i];
 			for( uint i = 0; i < _in.numTrianglesPerLeaf - (_max - _min + 1); ++i )
-				*(trianglesPtr++) = UVec4(0); // Invalid triangle per convention
+				*(trianglesPtr++) = ~0; // Invalid triangle
 
 			// Let new inner node pointing to this leaf
-			_in.hierarchy[nodeIdx].firstChild = 0x80000000 | (uint32)(leafIdx / _in.numTrianglesPerLeaf);
+			_in.hierarchy[nodeIdx].firstChild = 0x80000000 | (uint32)(leafIdx);
 
 			return nodeIdx;
 		}

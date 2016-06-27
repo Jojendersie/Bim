@@ -5,37 +5,37 @@ using namespace ei;
 
 namespace bim {
 
-	static void recomputeBVHAABoxesRec(const Vec3* _positions, const UVec4* _leaves, const Node* _hierarchy, Box* _aaBoxes, uint32 _node, uint _numTrianglesPerLeaf)
+	static void recomputeBVHAABoxesRec(const Vec3* _positions, const UVec3* _triangles, const uint32* _leaves, const Node* _hierarchy, Box* _aaBoxes, uint32 _node, uint _numTrianglesPerLeaf)
 	{
 		uint32 child = _hierarchy[_node].firstChild;
 		if(child & 0x80000000)
 		{
 			// Build a box for all triangles in the leaf
 			size_t leafIdx = child & 0x7fffffff;
-			leafIdx *= _numTrianglesPerLeaf;
+			//leafIdx *= _numTrianglesPerLeaf;
 			Triangle tri;
-			tri.v0 = _positions[_leaves[leafIdx].x];
-			tri.v1 = _positions[_leaves[leafIdx].y];
-			tri.v2 = _positions[_leaves[leafIdx].z];
+			tri.v0 = _positions[_triangles[_leaves[leafIdx]].x];
+			tri.v1 = _positions[_triangles[_leaves[leafIdx]].y];
+			tri.v2 = _positions[_triangles[_leaves[leafIdx]].z];
 			_aaBoxes[_node] = Box(tri);
 			for(uint i = 1; i < _numTrianglesPerLeaf; ++i)
 			{
 				// There are invalid triangles if a node is not filled
-				if(_leaves[leafIdx+i].x == _leaves[leafIdx+i].y)
+				if(_leaves[leafIdx+i] == ~0)
 					break;
-				tri.v0 = _positions[_leaves[leafIdx+i].x];
-				tri.v1 = _positions[_leaves[leafIdx+i].y];
-				tri.v2 = _positions[_leaves[leafIdx+i].z];
+				tri.v0 = _positions[_triangles[_leaves[leafIdx+i]].x];
+				tri.v1 = _positions[_triangles[_leaves[leafIdx+i]].y];
+				tri.v2 = _positions[_triangles[_leaves[leafIdx+i]].z];
 				_aaBoxes[_node] = Box(Box(tri), _aaBoxes[_node]);
 			}
 		} else {
 			// Iterate through all siblings
-			recomputeBVHAABoxesRec(_positions, _leaves, _hierarchy, _aaBoxes, child, _numTrianglesPerLeaf);
+			recomputeBVHAABoxesRec(_positions, _triangles, _leaves, _hierarchy, _aaBoxes, child, _numTrianglesPerLeaf);
 			_aaBoxes[_node] = _aaBoxes[child];
 			child = _hierarchy[child].escape;
 			while(_hierarchy[child].parent == _node && child != 0)
 			{
-				recomputeBVHAABoxesRec(_positions, _leaves, _hierarchy, _aaBoxes, child, _numTrianglesPerLeaf);
+				recomputeBVHAABoxesRec(_positions, _triangles, _leaves, _hierarchy, _aaBoxes, child, _numTrianglesPerLeaf);
 				_aaBoxes[_node] = Box(_aaBoxes[child], _aaBoxes[_node]);
 				child = _hierarchy[child].escape;
 			}
@@ -45,13 +45,13 @@ namespace bim {
 	void Chunk::recomputeBVHAABoxes()
 	{
 		m_aaBoxes.resize(m_hierarchy.size());
-		recomputeBVHAABoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), m_aaBoxes.data(), 0, m_numTrianglesPerLeaf);
+		recomputeBVHAABoxesRec(m_positions.data(), m_triangles.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), m_aaBoxes.data(), 0, m_numTrianglesPerLeaf);
 		m_properties = Property::Val(m_properties | Property::AABOX_BVH);
 	}
 
 
 
-	static void recomputeBVHOBoxesRec(const Vec3* _positions, const UVec4* _leaves, const Node* _hierarchy, std::vector<ei::Vec3>& _auxPos, OBox* _oBoxes, uint32 _node, uint _numTrianglesPerLeaf)
+	static void recomputeBVHOBoxesRec(const Vec3* _positions, const UVec3* _triangles, const uint32* _leaves, const Node* _hierarchy, std::vector<ei::Vec3>& _auxPos, OBox* _oBoxes, uint32 _node, uint _numTrianglesPerLeaf)
 	{
 		uint32 child = _hierarchy[_node].firstChild;
 		size_t firstPoint = _auxPos.size();
@@ -59,23 +59,23 @@ namespace bim {
 		{
 			// Collect a list of points from all vertices in the leaves
 			size_t leafIdx = child & 0x7fffffff;
-			leafIdx *= _numTrianglesPerLeaf;
+			//leafIdx *= _numTrianglesPerLeaf;
 			for(uint i = 0; i < _numTrianglesPerLeaf; ++i)
 			{
 				// There are invalid triangles if a node is not filled
-				if(_leaves[leafIdx+i].x == _leaves[leafIdx+i].y)
+				if(_leaves[leafIdx+i] == ~0)
 					break;
-				_auxPos.push_back(_positions[_leaves[leafIdx+i].x]);
-				_auxPos.push_back(_positions[_leaves[leafIdx+i].y]);
-				_auxPos.push_back(_positions[_leaves[leafIdx+i].z]);
+				_auxPos.push_back(_positions[_triangles[_leaves[leafIdx+i]].x]);
+				_auxPos.push_back(_positions[_triangles[_leaves[leafIdx+i]].y]);
+				_auxPos.push_back(_positions[_triangles[_leaves[leafIdx+i]].z]);
 			}
 		} else {
 			// Iterate through all siblings
-			recomputeBVHOBoxesRec(_positions, _leaves, _hierarchy, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
+			recomputeBVHOBoxesRec(_positions, _triangles, _leaves, _hierarchy, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
 			child = _hierarchy[child].escape;
 			while(_hierarchy[child].parent == _node && child != 0)
 			{
-				recomputeBVHOBoxesRec(_positions, _leaves, _hierarchy, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
+				recomputeBVHOBoxesRec(_positions, _triangles, _leaves, _hierarchy, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
 				child = _hierarchy[child].escape;
 			}
 		}
@@ -91,7 +91,7 @@ namespace bim {
 		std::vector<ei::Vec3> points;
 		points.reserve(m_positions.size() * 6);
 		m_oBoxes.resize(m_hierarchy.size());
-		recomputeBVHOBoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), points, m_oBoxes.data(), 0, m_numTrianglesPerLeaf);
+		recomputeBVHOBoxesRec(m_positions.data(), m_triangles.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), points, m_oBoxes.data(), 0, m_numTrianglesPerLeaf);
 		m_properties = Property::Val(m_properties | Property::OBOX_BVH);
 	}
 
@@ -108,7 +108,7 @@ namespace bim {
 	};
 
 	// _leaf Offseted pointer to the current leaf (not the entire array)
-	static TmpSGGX computeLeafSGGXBase(const Vec3* _positions, const Vec3* _normals, const UVec4* _leaf, uint _numTrianglesPerLeaf)
+	static TmpSGGX computeLeafSGGXBase(const Vec3* _positions, const Vec3* _normals, const UVec3* _triangles, const uint32* _leaf, uint _numTrianglesPerLeaf)
 	{
 		// Load triangle geometry
 		Triangle pos[16]; // TODO: DANGEROUS if _numLeaves > 16, but using local stack is much faster
@@ -116,11 +116,11 @@ namespace bim {
 		int n = 0; // Count real number of triangles
 		for( ; n < (int)_numTrianglesPerLeaf; ++n)
 		{
-			if(_leaf[n].x == _leaf[n].y) break;
-			pos[n] = Triangle(_positions[_leaf[n].x], _positions[_leaf[n].y], _positions[_leaf[n].z]);
-			nrm[n*3    ] = _normals[_leaf[n].x];
-			nrm[n*3 + 1] = _normals[_leaf[n].y];
-			nrm[n*3 + 2] = _normals[_leaf[n].z];
+			if(_leaf[n] == ~0) break;
+			pos[n] = Triangle(_positions[_triangles[_leaf[n]].x], _positions[_triangles[_leaf[n]].y], _positions[_triangles[_leaf[n]].z]);
+			nrm[n*3    ] = _normals[_triangles[_leaf[n]].x];
+			nrm[n*3 + 1] = _normals[_triangles[_leaf[n]].y];
+			nrm[n*3 + 2] = _normals[_triangles[_leaf[n]].z];
 		}
 
 		// Sample random normals from all triangles and compute spherical distribution variances.
@@ -186,21 +186,21 @@ namespace bim {
 		return s;
 	}
 
-	static TmpSGGX computeBVHSGGXApproximationsRec(const Vec3* _positions, const Vec3* _normals, const Node* _hierarchy, uint32 _node, const UVec4* _leaves, const Box* _aaBoxes, uint _numTrianglesPerLeaf, std::vector<SGGX>& _output)
+	static TmpSGGX computeBVHSGGXApproximationsRec(const Vec3* _positions, const Vec3* _normals, const Node* _hierarchy, uint32 _node, const UVec3* _trianges, const uint32* _leaves, const Box* _aaBoxes, uint _numTrianglesPerLeaf, std::vector<SGGX>& _output)
 	{
 		TmpSGGX s;
 		// End of recursion (inner node which points to one leaf)
 		uint32 child = _hierarchy[_node].firstChild;
 		if(child & 0x80000000)
 		{
-			s = computeLeafSGGXBase(_positions, _normals, _leaves + (child & 0x7fffffff) * _numTrianglesPerLeaf, _numTrianglesPerLeaf);
+			s = computeLeafSGGXBase(_positions, _normals, _trianges, _leaves + (child & 0x7fffffff), _numTrianglesPerLeaf);
 		} else {
-			s = computeBVHSGGXApproximationsRec(_positions, _normals, _hierarchy, child, _leaves, _aaBoxes, _numTrianglesPerLeaf, _output);
+			s = computeBVHSGGXApproximationsRec(_positions, _normals, _hierarchy, child, _trianges, _leaves, _aaBoxes, _numTrianglesPerLeaf, _output);
 			child = _hierarchy[child].escape;
 			float lw = surface(_aaBoxes[child]);
 			eiAssert(_hierarchy[child].parent == _node && child!=0 && _hierarchy[_hierarchy[child].escape].parent != _node,
 				"Expected binary tree!");
-			TmpSGGX s2 = computeBVHSGGXApproximationsRec(_positions, _normals, _hierarchy, child, _leaves, _aaBoxes, _numTrianglesPerLeaf, _output);
+			TmpSGGX s2 = computeBVHSGGXApproximationsRec(_positions, _normals, _hierarchy, child, _trianges, _leaves, _aaBoxes, _numTrianglesPerLeaf, _output);
 			// Weight depending on subtree bounding volume sizes
 			float rw = surface(_aaBoxes[child]);
 			float wsum = lw + rw;
@@ -225,6 +225,7 @@ namespace bim {
 			m_normals.data(),
 			m_hierarchy.data(),
 			0,
+			m_triangles.data(),
 			m_hierarchyLeaves.data(),
 			m_aaBoxes.data(),
 			m_numTrianglesPerLeaf,

@@ -324,7 +324,7 @@ namespace bim {
 			header.size += m_chunks[idx].m_triangleMaterials.size() * sizeof(uint32) + sizeof(SectionHeader);
 		if(m_chunks[idx].m_properties & Property::HIERARCHY)
 			header.size += m_chunks[idx].m_hierarchy.size() * sizeof(Node) + sizeof(SectionHeader) * 2
-							+ m_chunks[idx].m_hierarchyLeaves.size() * sizeof(ei::UVec4);
+							+ m_chunks[idx].m_hierarchyLeaves.size() * sizeof(uint32);
 		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			header.size += m_chunks[idx].m_aaBoxes.size() * sizeof(ei::Box) + sizeof(SectionHeader);
 		if(m_chunks[idx].m_properties & Property::OBOX_BVH)

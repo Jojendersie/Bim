@@ -43,7 +43,8 @@ namespace bim {
 	const int META_SECTION = 0x0;
 	const int CHUNK_SECTION = 0x3;
 	const int MATERIAL_REFERENCE = 0x5;
-	const int HIERARCHY_LEAVES = 0x08000001;
+	const int HIERARCHY_PARENTS = 0x08000001;
+	const int HIERARCHY_LEAVES = 0x08000002;
 	const int CHUNK_META_SECTION = 0x6;
 
 	struct MetaSection
@@ -250,6 +251,7 @@ namespace bim {
 						case Property::TRIANGLE_IDX: loadFileChunk(m_file, header, m_chunks[idx].m_triangles, m_chunks[idx].m_properties, Property::TRIANGLE_IDX); break;
 						case Property::TRIANGLE_MAT: loadFileChunk(m_file, header, m_chunks[idx].m_triangleMaterials, m_chunks[idx].m_properties, Property::TRIANGLE_MAT); break;
 						case Property::HIERARCHY: loadFileChunk(m_file, header, m_chunks[idx].m_hierarchy, m_chunks[idx].m_properties, Property::HIERARCHY); break;
+						case HIERARCHY_PARENTS: loadFileChunk(m_file, header, m_chunks[idx].m_hierarchyParents, m_chunks[idx].m_properties, Property::DONT_CARE); break;
 						case HIERARCHY_LEAVES: loadFileChunk(m_file, header, m_chunks[idx].m_hierarchyLeaves, m_chunks[idx].m_properties, Property::DONT_CARE); break;
 						case Property::AABOX_BVH: loadFileChunk(m_file, header, m_chunks[idx].m_aaBoxes, m_chunks[idx].m_properties, Property::AABOX_BVH); break;
 						case Property::OBOX_BVH: loadFileChunk(m_file, header, m_chunks[idx].m_oBoxes, m_chunks[idx].m_properties, Property::OBOX_BVH); break;
@@ -351,7 +353,7 @@ namespace bim {
 		if(m_chunks[idx].m_properties & Property::TRIANGLE_MAT)
 			header.size += m_chunks[idx].m_triangleMaterials.size() * sizeof(uint32) + sizeof(SectionHeader);
 		if(m_chunks[idx].m_properties & Property::HIERARCHY)
-			header.size += m_chunks[idx].m_hierarchy.size() * sizeof(Node) + sizeof(SectionHeader) * 2
+			header.size += m_chunks[idx].m_hierarchy.size() * (sizeof(Node) + sizeof(uint32)) + sizeof(SectionHeader) * 2
 							+ m_chunks[idx].m_hierarchyLeaves.size() * sizeof(ei::UVec4);
 		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
 			header.size += m_chunks[idx].m_aaBoxes.size() * sizeof(ei::Box) + sizeof(SectionHeader);
@@ -400,6 +402,7 @@ namespace bim {
 		if(m_chunks[idx].m_properties & Property::HIERARCHY)
 		{
 			storeFileChunk(file, Property::HIERARCHY, m_chunks[idx].m_hierarchy);
+			storeFileChunk(file, HIERARCHY_PARENTS, m_chunks[idx].m_hierarchyParents);
 			storeFileChunk(file, HIERARCHY_LEAVES, m_chunks[idx].m_hierarchyLeaves);
 		}
 		if(m_chunks[idx].m_properties & Property::AABOX_BVH)

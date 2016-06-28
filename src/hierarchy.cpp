@@ -5,7 +5,7 @@ using namespace ei;
 
 namespace bim {
 
-	static void recomputeBVHAABoxesRec(const Vec3* _positions, const UVec4* _leaves, const Node* _hierarchy, Box* _aaBoxes, uint32 _node, uint _numTrianglesPerLeaf)
+	static void recomputeBVHAABoxesRec(const Vec3* _positions, const UVec4* _leaves, const Node* _hierarchy, const uint32* _parents, Box* _aaBoxes, uint32 _node, uint _numTrianglesPerLeaf)
 	{
 		uint32 child = _hierarchy[_node].firstChild;
 		if(child & 0x80000000)
@@ -30,12 +30,12 @@ namespace bim {
 			}
 		} else {
 			// Iterate through all siblings
-			recomputeBVHAABoxesRec(_positions, _leaves, _hierarchy, _aaBoxes, child, _numTrianglesPerLeaf);
+			recomputeBVHAABoxesRec(_positions, _leaves, _hierarchy, _parents, _aaBoxes, child, _numTrianglesPerLeaf);
 			_aaBoxes[_node] = _aaBoxes[child];
 			child = _hierarchy[child].escape;
-			while(_hierarchy[child].parent == _node && child != 0)
+			while(_parents[child] == _node && child != 0)
 			{
-				recomputeBVHAABoxesRec(_positions, _leaves, _hierarchy, _aaBoxes, child, _numTrianglesPerLeaf);
+				recomputeBVHAABoxesRec(_positions, _leaves, _hierarchy, _parents, _aaBoxes, child, _numTrianglesPerLeaf);
 				_aaBoxes[_node] = Box(_aaBoxes[child], _aaBoxes[_node]);
 				child = _hierarchy[child].escape;
 			}
@@ -45,13 +45,13 @@ namespace bim {
 	void Chunk::recomputeBVHAABoxes()
 	{
 		m_aaBoxes.resize(m_hierarchy.size());
-		recomputeBVHAABoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), m_aaBoxes.data(), 0, m_numTrianglesPerLeaf);
+		recomputeBVHAABoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), m_hierarchyParents.data(), m_aaBoxes.data(), 0, m_numTrianglesPerLeaf);
 		m_properties = Property::Val(m_properties | Property::AABOX_BVH);
 	}
 
 
 
-	static void recomputeBVHOBoxesRec(const Vec3* _positions, const UVec4* _leaves, const Node* _hierarchy, std::vector<ei::Vec3>& _auxPos, OBox* _oBoxes, uint32 _node, uint _numTrianglesPerLeaf)
+	static void recomputeBVHOBoxesRec(const Vec3* _positions, const UVec4* _leaves, const Node* _hierarchy, const uint32* _parents, std::vector<ei::Vec3>& _auxPos, OBox* _oBoxes, uint32 _node, uint _numTrianglesPerLeaf)
 	{
 		uint32 child = _hierarchy[_node].firstChild;
 		size_t firstPoint = _auxPos.size();
@@ -71,11 +71,11 @@ namespace bim {
 			}
 		} else {
 			// Iterate through all siblings
-			recomputeBVHOBoxesRec(_positions, _leaves, _hierarchy, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
+			recomputeBVHOBoxesRec(_positions, _leaves, _hierarchy, _parents, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
 			child = _hierarchy[child].escape;
-			while(_hierarchy[child].parent == _node && child != 0)
+			while(_parents[child] == _node && child != 0)
 			{
-				recomputeBVHOBoxesRec(_positions, _leaves, _hierarchy, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
+				recomputeBVHOBoxesRec(_positions, _leaves, _hierarchy, _parents, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
 				child = _hierarchy[child].escape;
 			}
 		}
@@ -91,7 +91,7 @@ namespace bim {
 		std::vector<ei::Vec3> points;
 		points.reserve(m_positions.size() * 6);
 		m_oBoxes.resize(m_hierarchy.size());
-		recomputeBVHOBoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), points, m_oBoxes.data(), 0, m_numTrianglesPerLeaf);
+		recomputeBVHOBoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), m_hierarchyParents.data(), points, m_oBoxes.data(), 0, m_numTrianglesPerLeaf);
 		m_properties = Property::Val(m_properties | Property::OBOX_BVH);
 	}
 
@@ -198,8 +198,8 @@ namespace bim {
 			s = computeBVHSGGXApproximationsRec(_positions, _normals, _hierarchy, child, _leaves, _aaBoxes, _numTrianglesPerLeaf, _output);
 			child = _hierarchy[child].escape;
 			float lw = surface(_aaBoxes[child]);
-			eiAssert(_hierarchy[child].parent == _node && child!=0 && _hierarchy[_hierarchy[child].escape].parent != _node,
-				"Expected binary tree!");
+			//eiAssert(_parents[child] == _node && child!=0 && _parents[_hierarchy[child].escape] != _node,
+			//	"Expected binary tree!");
 			TmpSGGX s2 = computeBVHSGGXApproximationsRec(_positions, _normals, _hierarchy, child, _leaves, _aaBoxes, _numTrianglesPerLeaf, _output);
 			// Weight depending on subtree bounding volume sizes
 			float rw = surface(_aaBoxes[child]);
@@ -240,7 +240,7 @@ namespace bim {
 		// Keep firstChild, because firstChild == left in any case.
 		uint32 left = m_hierarchy[_this].firstChild;
 		uint32 right = m_hierarchy[_this].escape;
-		m_hierarchy[_this].parent = _parent;
+		m_hierarchyParents[_this] = _parent;
 		m_hierarchy[_this].escape = _escape;
 		if(!(left & 0x80000000)) // If not a leaf-child
 		{

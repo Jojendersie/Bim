@@ -9,6 +9,7 @@ namespace bim {
 	struct SAHBuildInfo
 	{
 		std::vector<Node>& hierarchy;
+		std::vector<uint32>& parents;
 		std::vector<UVec4>& leaves;
 		const std::vector<Vec3>& positions;
 		const std::vector<UVec3>& triangles;
@@ -27,7 +28,8 @@ namespace bim {
 	{
 		uint32 nodeIdx = (uint32)_in.hierarchy.size();
 		_in.hierarchy.resize(nodeIdx + 1);
-		_in.hierarchy[nodeIdx].firstChild = _in.hierarchy[nodeIdx].escape = _in.hierarchy[nodeIdx].parent = 0;
+		_in.parents.resize(nodeIdx + 1);
+		_in.hierarchy[nodeIdx].firstChild = _in.hierarchy[nodeIdx].escape = _in.parents[nodeIdx] = 0;
 
 		// Create a leaf if less than NUM_PRIMITIVES elements remain.
 		eiAssert(_min <= _max, "Node without triangles!");
@@ -139,7 +141,8 @@ namespace bim {
 		}
 
 		m_hierarchy.reserve(n*2);
-		SAHBuildInfo input = {m_hierarchy, m_hierarchyLeaves, m_positions,
+		m_hierarchyParents.reserve(n*2);
+		SAHBuildInfo input = {m_hierarchy, m_hierarchyParents, m_hierarchyLeaves, m_positions,
 			m_triangles, m_triangleMaterials, m_numTrianglesPerLeaf,
 			ids.get(), centers.get()};
 		build(input, 0, n-1);

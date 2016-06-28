@@ -38,7 +38,7 @@ namespace bim {
 	
 	struct Node
 	{
-		uint32 parent;		///< Index of the parent node
+//		uint32 parent;		///< Index of the parent node
 		uint32 firstChild;	///< Index of the first child node
 		uint32 escape;		///< Index of the next element in a preorder traversal if children are skipped. This can be a sibling or some node on a higher level.
 	};
@@ -99,6 +99,8 @@ namespace bim {
 		uint getNumLeafNodes() const				{ return (uint)(m_hierarchyLeaves.size() / m_numTrianglesPerLeaf); }
 		Node* getHierarchy()						{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
 		const Node* getHierarchy() const			{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
+		uint32* getHierarchyParents()				{ return m_hierarchyParents.empty() ? nullptr : m_hierarchyParents.data(); }
+		const uint32* getHierarchyParents() const	{ return m_hierarchyParents.empty() ? nullptr : m_hierarchyParents.data(); }
 		const ei::Box* getHierarchyAABoxes() const	{ return m_aaBoxes.data(); }
 		const ei::OBox* getHierarchyOBoxes() const	{ return m_oBoxes.data(); }
 		const ei::UVec4* getLeafNodes() const		{ return m_hierarchyLeaves.data(); }
@@ -178,7 +180,8 @@ namespace bim {
 		std::vector<ei::uint32> m_colors;
 		std::vector<ei::UVec3> m_triangles;
 		std::vector<uint32> m_triangleMaterials;
-		std::vector<Node> m_hierarchy;
+		std::vector<Node> m_hierarchy;				///< Child and escape pointers. Defined if Property::HIERARCHY is available.
+		std::vector<uint32> m_hierarchyParents;		///< Indices of the parent nodes. Defined if Property::HIERARCHY is available.
 		std::vector<ei::UVec4> m_hierarchyLeaves;
 		std::vector<ei::Box> m_aaBoxes;
 		std::vector<ei::OBox> m_oBoxes;

@@ -267,6 +267,8 @@ int main(int _numArgs, const char** _args)
 	std::cerr << "    Vertices: " << numVertices << '\n';
 	std::cerr << "    Triangles: " << numTriangles << '\n';
 	bim::BinaryModel model(properties);
+	// TODO: argument
+	model.setNumTrianglesPerLeaf(2);
 	// Fill the model with data
 	std::cerr << "INF: importing materials...\n";
 	importMaterials(importer.GetScene(), model);
@@ -284,14 +286,14 @@ int main(int _numArgs, const char** _args)
 	//foreach chunk
 	{
 		std::cerr << "INF: building BVH...\n";
-		model.getChunk(ei::IVec3(0))->rebuildHierarchy(method, 2);
+		model.getChunk(ei::IVec3(0))->buildHierarchy(method);
 		if(computeAAB) {
 			std::cerr << "INF: computing AABoxes...\n";
-			model.getChunk(ei::IVec3(0))->recomputeBVHAABoxes();
+			model.getChunk(ei::IVec3(0))->computeBVHAABoxes();
 		}
 		if(computeOB) {
 			std::cerr << "INF: computing OBoxes...\n";
-			model.getChunk(ei::IVec3(0))->recomputeBVHOBoxes();
+			model.getChunk(ei::IVec3(0))->computeBVHOBoxes();
 		}
 		if(computeSGGX) {
 			std::cerr << "INF: computing SGGX NDFs...\n";

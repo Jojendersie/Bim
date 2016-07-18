@@ -63,6 +63,9 @@ namespace bim {
 		int findMaterial(const std::string& _name);
 
 		const ei::Box& getBoundingBox() const { return m_boundingBox; }
+		/// Global parameter for the chunk->buildHierarchy().
+		void setNumTrianglesPerLeaf(uint _numTrianglesPerLeaf) { m_numTrianglesPerLeaf = m_numTrianglesPerLeaf; }
+		uint getNumTrianglesPerLeaf() const { return m_numTrianglesPerLeaf; }
 	private:
 		bool loadEnv(const char* _envFile);
 		void storeEnv(const char* _envFile);
@@ -85,6 +88,7 @@ namespace bim {
 		Property::Val m_optionalProperties;
 		bool m_loadAll;					///< If a chunk is loaded, load all available data or only the required part
 		ei::Box m_boundingBox;
+		uint m_numTrianglesPerLeaf;		///< When the hierarchy is build the number of triangles per leaf node is set as parameter
 	};
 
 }

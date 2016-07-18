@@ -42,7 +42,7 @@ namespace bim {
 		}
 	}
 
-	void Chunk::recomputeBVHAABoxes()
+	void Chunk::computeBVHAABoxes()
 	{
 		m_aaBoxes.resize(m_hierarchy.size());
 		recomputeBVHAABoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), m_hierarchyParents.data(), m_aaBoxes.data(), 0, m_numTrianglesPerLeaf);
@@ -51,7 +51,7 @@ namespace bim {
 
 
 
-	static void recomputeBVHOBoxesRec(const Vec3* _positions, const UVec4* _leaves, const Node* _hierarchy, const uint32* _parents, std::vector<ei::Vec3>& _auxPos, OBox* _oBoxes, uint32 _node, uint _numTrianglesPerLeaf)
+	static void computeBVHOBoxesRec(const Vec3* _positions, const UVec4* _leaves, const Node* _hierarchy, const uint32* _parents, std::vector<ei::Vec3>& _auxPos, OBox* _oBoxes, uint32 _node, uint _numTrianglesPerLeaf)
 	{
 		uint32 child = _hierarchy[_node].firstChild;
 		size_t firstPoint = _auxPos.size();
@@ -71,11 +71,11 @@ namespace bim {
 			}
 		} else {
 			// Iterate through all siblings
-			recomputeBVHOBoxesRec(_positions, _leaves, _hierarchy, _parents, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
+			computeBVHOBoxesRec(_positions, _leaves, _hierarchy, _parents, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
 			child = _hierarchy[child].escape;
 			while(_parents[child] == _node && child != 0)
 			{
-				recomputeBVHOBoxesRec(_positions, _leaves, _hierarchy, _parents, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
+				computeBVHOBoxesRec(_positions, _leaves, _hierarchy, _parents, _auxPos, _oBoxes, child, _numTrianglesPerLeaf);
 				child = _hierarchy[child].escape;
 			}
 		}
@@ -84,14 +84,14 @@ namespace bim {
 		_oBoxes[_node] = OBox(_auxPos.data() + firstPoint, n);
 	}
 
-	void Chunk::recomputeBVHOBoxes()
+	void Chunk::computeBVHOBoxes()
 	{
 		// Auxiliary buffer for positions, because the OBox build algorithm
 		// requires a thick packed list of vertices.
 		std::vector<ei::Vec3> points;
 		points.reserve(m_positions.size() * 6);
 		m_oBoxes.resize(m_hierarchy.size());
-		recomputeBVHOBoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), m_hierarchyParents.data(), points, m_oBoxes.data(), 0, m_numTrianglesPerLeaf);
+		computeBVHOBoxesRec(m_positions.data(), m_hierarchyLeaves.data(), m_hierarchy.data(), m_hierarchyParents.data(), points, m_oBoxes.data(), 0, m_numTrianglesPerLeaf);
 		m_properties = Property::Val(m_properties | Property::OBOX_BVH);
 	}
 

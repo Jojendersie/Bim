@@ -4,7 +4,8 @@
 
 namespace bim {
 
-	Chunk::Chunk() :
+	Chunk::Chunk(BinaryModel* _parent) :
+		m_parent(_parent),
 		m_address(0),
 		m_properties(Property::DONT_CARE),
 		m_numTrianglesPerLeaf(0),
@@ -151,9 +152,9 @@ namespace bim {
 		//std::cout << "T: " << numInvalidTriangles << '\n';
 	}
 
-	void Chunk::rebuildHierarchy(BuildMethod _method, uint _numTrianglesPerLeaf)
+	void Chunk::buildHierarchy(BuildMethod _method)
 	{
-		m_numTrianglesPerLeaf = _numTrianglesPerLeaf;
+		m_numTrianglesPerLeaf = m_parent->getNumTrianglesPerLeaf();
 		switch(_method)
 		{
 		case BuildMethod::KD_TREE:

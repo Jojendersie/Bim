@@ -51,13 +51,14 @@ namespace bim {
 	{
 		ei::IVec3 numChunks;	// Number of stored chunks
 		ei::Box boundingBox;	// Entire scene bounding box
+		uint numTrianglesPerLeaf;
 	};
 
 	struct ChunkMetaSection
 	{
 		ei::Box boundingBox;
-		uint m_numTrianglesPerLeaf;
-		uint m_numTreeLevels;
+		uint numTrianglesPerLeaf;
+		uint numTreeLevels;
 	};
 
 	bool BinaryModel::load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, Property::Val _optionalProperties, bool _loadAll)
@@ -87,12 +88,13 @@ namespace bim {
 		m_requestedProps = Property::Val(_requiredProperties | Property::POSITION | Property::TRIANGLE_IDX);
 		m_optionalProperties = _optionalProperties;
 		m_numChunks = meta.numChunks;
+		m_numTrianglesPerLeaf = meta.numTrianglesPerLeaf;
 		m_dimScale = ei::IVec3(1, m_numChunks.x, m_numChunks.x * m_numChunks.y);
 		m_boundingBox = meta.boundingBox;
 	
 		m_chunks.clear();
 		m_chunkStates.clear();
-		Chunk emptyChunk;
+		Chunk emptyChunk(this);
 		emptyChunk.m_properties = Property::DONT_CARE;
 		while(m_file.read(reinterpret_cast<char*>(&header), sizeof(SectionHeader)))
 		{
@@ -157,6 +159,7 @@ namespace bim {
 		refreshBoundingBox();
 		meta.numChunks = m_numChunks;
 		meta.boundingBox = m_boundingBox;
+		meta.numTrianglesPerLeaf = m_numTrianglesPerLeaf;
 		file.write(reinterpret_cast<char*>(&meta), sizeof(MetaSection));
 
 		header.type = MATERIAL_REFERENCE;
@@ -235,8 +238,8 @@ namespace bim {
 							ChunkMetaSection meta;
 							m_file.read(reinterpret_cast<char*>(&meta), sizeof(ChunkMetaSection));
 							m_chunks[idx].m_boundingBox = meta.boundingBox;
-							m_chunks[idx].m_numTrianglesPerLeaf = meta.m_numTrianglesPerLeaf;
-							m_chunks[idx].m_numTreeLevels = meta.m_numTreeLevels;
+							m_chunks[idx].m_numTrianglesPerLeaf = meta.numTrianglesPerLeaf;
+							m_chunks[idx].m_numTreeLevels = meta.numTreeLevels;
 							break; }
 						case Property::POSITION: loadFileChunk(m_file, header, m_chunks[idx].m_positions, m_chunks[idx].m_properties, Property::POSITION); break;
 						case Property::NORMAL: loadFileChunk(m_file, header, m_chunks[idx].m_normals, m_chunks[idx].m_properties, Property::NORMAL); break;
@@ -308,7 +311,7 @@ namespace bim {
 		// Compress data
 		mz_ulong compressedSize = compressBound((mz_ulong)header.uncompressedSize);
 		std::unique_ptr<byte[]> compressedBuffer = std::make_unique<byte[]>(compressedSize);
-		int r = compress2(compressedBuffer.get(), &compressedSize, reinterpret_cast<const byte*>(_data.data()), (mz_ulong)header.uncompressedSize, 6);
+		int r = compress2(compressedBuffer.get(), &compressedSize, reinterpret_cast<const byte*>(_data.data()), (mz_ulong)header.uncompressedSize, 9);
 		if(r != Z_OK) {
 			std::cerr << "Failed to compress a data chunk!\n";
 			return;
@@ -367,8 +370,8 @@ namespace bim {
 		header.size = sizeof(ChunkMetaSection);
 		ChunkMetaSection meta;
 		meta.boundingBox = m_chunks[idx].m_boundingBox;
-		meta.m_numTrianglesPerLeaf = m_chunks[idx].m_numTrianglesPerLeaf;
-		meta.m_numTreeLevels = m_chunks[idx].m_numTreeLevels;
+		meta.numTrianglesPerLeaf = m_chunks[idx].m_numTrianglesPerLeaf;
+		meta.numTreeLevels = m_chunks[idx].m_numTreeLevels;
 		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
 		file.write(reinterpret_cast<const char*>(&meta), sizeof(ChunkMetaSection));
 	

@@ -8,9 +8,11 @@ namespace bim {
 		m_chunkStates(1, ChunkState::LOADED),	// Chunk exists, but is empty (no mesh data)
 		m_chunks(1),
 		m_requestedProps(Property::Val(_properties | Property::POSITION | Property::TRIANGLE_IDX)),
-		m_loadAll(false)
+		m_loadAll(false),
+		m_numTrianglesPerLeaf(2)
 	{
 		m_chunks[0].m_properties = m_requestedProps;
+		m_chunks[0].m_parent = this;
 		m_boundingBox.min = ei::Vec3(1e10f);
 		m_boundingBox.max = ei::Vec3(-1e10f);
 	}

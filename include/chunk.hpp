@@ -63,7 +63,7 @@ namespace bim {
 	class Chunk
 	{
 	public:
-		Chunk();
+		Chunk(class BinaryModel* _parent = nullptr);
 
 		uint getNumVertices() const					{ return (uint)m_positions.size(); }
 		ei::Vec3* getPositions()					{ return m_positions.empty() ? nullptr : m_positions.data(); }
@@ -88,7 +88,6 @@ namespace bim {
 		const uint32* getColors() const				{ return m_colors.empty() ? nullptr : m_colors.data(); }
 
 		uint getNumTriangles() const				{ return (uint)m_triangles.size(); }
-		uint getNumTrianglesPerLeaf() const			{ return m_numTrianglesPerLeaf; }
 		ei::UVec3* getTriangles()					{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
 		const ei::UVec3* getTriangles() const		{ return m_triangles.empty() ? nullptr : m_triangles.data(); }
 		uint32* getTriangleMaterials()				{ return m_triangleMaterials.empty() ? nullptr : m_triangleMaterials.data(); }
@@ -156,15 +155,16 @@ namespace bim {
 			SAH,		///< Use surface area heuristic in the 'largest' dimension.
 		};
 		/// Build a hierarchy on top of all triangles
-		void rebuildHierarchy(BuildMethod _method, uint _numTrianglesPerLeaf);
+		void buildHierarchy(BuildMethod _method);
 		/// Compute bounding volumes for all nodes in the hierarchy.
-		void recomputeBVHAABoxes();
-		void recomputeBVHOBoxes();
-		void recomputeBVHSpheres();
+		void computeBVHAABoxes();
+		void computeBVHOBoxes();
+		void computeBVHSpheres();
 
 		void computeBVHSGGXApproximations();
 
 	private: friend class BinaryModel;
+		class BinaryModel* m_parent;
 		uint64 m_address;
 		Property::Val m_properties;
 		ei::Box m_boundingBox;

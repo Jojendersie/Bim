@@ -1,6 +1,6 @@
 #include "bim.hpp"
 #include "hashgrid.hpp"
-//#include <iostream>
+#include <iostream>
 
 namespace bim {
 
@@ -42,6 +42,63 @@ namespace bim {
 			m_colors.push_back(_properties.color);
 	}
 		
+	void Chunk::setVertex(uint32 _index, const FullVertex & _properties)
+	{
+		if(m_positions.empty())
+			m_boundingBox.min = m_boundingBox.max = _properties.position;
+		else {
+			m_boundingBox.min = min(_properties.position, m_boundingBox.min);
+			m_boundingBox.max = max(_properties.position, m_boundingBox.max);
+		}
+		if(_index >= m_positions.size()) m_positions.resize(_index + 1);
+		m_positions[_index] = _properties.position;
+		if(m_properties & Property::NORMAL)
+		{
+			if(_index >= m_normals.size()) m_normals.resize(_index + 1);
+			m_normals.push_back(_properties.normal);
+		}
+		if(m_properties & Property::TANGENT)
+		{
+			if(_index >= m_tangents.size()) m_tangents.resize(_index + 1);
+			m_tangents.push_back(_properties.tangent);
+		}
+		if(m_properties & Property::BITANGENT)
+		{
+			if(_index >= m_bitangents.size()) m_bitangents.resize(_index + 1);
+			m_bitangents.push_back(_properties.bitangent);
+		}
+		if(m_properties & Property::QORMAL)
+		{
+			if(_index >= m_qormals.size()) m_qormals.resize(_index + 1);
+			m_qormals.push_back(_properties.qormal);
+		}
+		if(m_properties & Property::TEXCOORD0)
+		{
+			if(_index >= m_texCoords0.size()) m_texCoords0.resize(_index + 1);
+			m_texCoords0.push_back(_properties.texCoord0);
+		}
+		if(m_properties & Property::TEXCOORD1)
+		{
+			if(_index >= m_texCoords1.size()) m_texCoords1.resize(_index + 1);
+			m_texCoords1.push_back(_properties.texCoord1);
+		}
+		if(m_properties & Property::TEXCOORD2)
+		{
+			if(_index >= m_texCoords2.size()) m_texCoords2.resize(_index + 1);
+			m_texCoords2.push_back(_properties.texCoord2);
+		}
+		if(m_properties & Property::TEXCOORD3)
+		{
+			if(_index >= m_texCoords3.size()) m_texCoords3.resize(_index + 1);
+			m_texCoords3.push_back(_properties.texCoord3);
+		}
+		if(m_properties & Property::COLOR)
+		{
+			if(_index >= m_colors.size()) m_colors.resize(_index + 1);
+			m_colors.push_back(_properties.color);
+		}
+	}
+
 	void Chunk::addTriangle(const ei::UVec3& _indices, uint32 _material)
 	{
 		m_triangles.push_back(_indices);
@@ -132,7 +189,7 @@ namespace bim {
 		if(!m_texCoords2.empty()) m_texCoords2.resize(index);
 		if(!m_texCoords3.empty()) m_texCoords3.resize(index);
 		if(!m_colors.empty()) m_colors.resize(index);
-		//std::cout<< "V: " << index << " / " << numVertices << '\n';
+		std::cerr << "INF: remove vertices in/out: " << index << " / " << numVertices << '\n';
 
 		// Rebuild index buffer
 		size_t numInvalidTriangles = 0;
@@ -149,7 +206,7 @@ namespace bim {
 			}
 		}
 		m_triangles.resize(m_triangles.size() - numInvalidTriangles);
-		//std::cout << "T: " << numInvalidTriangles << '\n';
+		std::cerr << "INF: found " << numInvalidTriangles << " invalid triangles after removing redundant vertices.\n";
 	}
 
 	void Chunk::buildHierarchy(BuildMethod _method)

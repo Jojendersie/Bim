@@ -136,6 +136,10 @@ namespace bim {
 		///		chunk.addTriangle(UVec3(...), matID);
 		///	}
 		void addVertex(const FullVertex& _properties);
+
+		/// Overwrite a specific vertex.
+		/// If there are less vertices than _index the internal memory is resized.
+		void setVertex(uint32 _index, const FullVertex& _properties);
 		
 		void addTriangle(const ei::UVec3& _indices, uint32 _material);
 		

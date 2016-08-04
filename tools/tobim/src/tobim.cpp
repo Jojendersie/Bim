@@ -71,6 +71,7 @@ void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4
 	{
 		const aiMesh* mesh = _scene->mMeshes[ _node->mMeshes[i] ];
 		bim::Chunk::FullVertex newVertex;
+		//uint32 indexOffset = chunk.getNumVertices();
 
 		// Find the material entry
 		uint32 materialIndex = 0;
@@ -109,6 +110,8 @@ void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4
 				// Add vertex and get its index for the triangle
 				triangleIndices[j] = chunk.getNumVertices();
 				chunk.addVertex(newVertex);
+				//triangleIndices[j] = face.mIndices[j] + indexOffset;
+				//chunk.setVertex(triangleIndices[j], newVertex);
 			}
 			chunk.addTriangle(triangleIndices, materialIndex);
 		}
@@ -163,10 +166,12 @@ void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
 		if( mat->GetTexture( aiTextureType_SHININESS, 0, &aiTmpStr ) == AI_SUCCESS )
 		{
 			material.setTexture("shininess", aiTmpStr.C_Str());
+			material.set("roughness", ei::Vec4(1.0f, 0.0f, 0.0f, 0.0f));
 		} else {
 			float shininess = 1.0f;
 			mat->Get( AI_MATKEY_SHININESS, shininess );
 			material.set("shininess", ei::Vec4(shininess, 0.0f, 0.0f, 0.0f));
+			material.set("roughness", ei::Vec4(1.0f / (shininess * shininess), 0.0f, 0.0f, 0.0f));
 		}
 
 		// Load opacity
@@ -285,6 +290,9 @@ int main(int _numArgs, const char** _args)
 	}
 	//foreach chunk
 	{
+		std::cerr << "INF: computing tangent space...\n";
+		model.getChunk(ei::IVec3(0))->removeRedundantVertices();
+		model.getChunk(ei::IVec3(0))->computeTangentSpace(bim::Property::Val(bim::Property::NORMAL | bim::Property::TANGENT | bim::Property::BITANGENT));
 		std::cerr << "INF: building BVH...\n";
 		model.getChunk(ei::IVec3(0))->buildHierarchy(method);
 		if(computeAAB) {

@@ -12,7 +12,7 @@ namespace bim {
 		// For quaternions the entire space is computed and then converted.
 		bool needsAll = (_components & Property::QORMAL) || (_components & Property::TANGENT) || (m_properties & Property::BITANGENT);
 		// Positions and texture coordinates are required for tangent space calculation.
-		if(needsAll && !((_components & Property::TEXCOORD0) && (_components & Property::POSITION))) {
+		if(needsAll && !((m_properties & Property::TEXCOORD0) && (m_properties & Property::POSITION))) {
 			std::cerr << "Can't compute tangent space. Texture coordinates missing.\n";
 			return;
 		}
@@ -36,10 +36,14 @@ namespace bim {
 			if(needsAll) {
 				Vec2 uva = m_texCoords0[m_triangles[i].y] - m_texCoords0[m_triangles[i].x];
 				Vec2 uvb = m_texCoords0[m_triangles[i].z] - m_texCoords0[m_triangles[i].x];
-				triTangent = normalize(uva.y * e1 - uvb.y * e0);
-				triBitangent = cross(triNormal, triTangent);
-				if(uva.x * uvb.y - uva.y * uvb.x < 0.0f) // "normal" of the uv coordinates
-					triBitangent = -triBitangent;
+				float det = uva.x * uvb.y - uva.y * uvb.x; // may swap the sign
+				triTangent = (uvb.y * e0 - uva.y * e1) / det;
+				triBitangent = (uva.x * e1 - uvb.x * e0) / det;
+				ei::orthonormalize(triNormal, triTangent, triBitangent);
+				//triTangent = normalize(uva.y * e1 - uvb.y * e0);
+				//triBitangent = cross(triNormal, triTangent);
+				//if(uva.x * uvb.y - uva.y * uvb.x < 0.0f) // "normal" of the uv coordinates
+				//	triBitangent = -triBitangent;
 			}
 			float lenE0 = len(e0), lenE1 = len(e1), lenE2 = len(e2);
 			float weight = acos(saturate(dot(e0, e1) / (lenE0 * lenE1)));

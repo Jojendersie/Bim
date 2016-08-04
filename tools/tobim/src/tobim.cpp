@@ -290,8 +290,9 @@ int main(int _numArgs, const char** _args)
 	}
 	//foreach chunk
 	{
-		std::cerr << "INF: computing tangent space...\n";
+		std::cerr << "INF: removing redundant vertices...\n";
 		model.getChunk(ei::IVec3(0))->removeRedundantVertices();
+		std::cerr << "INF: computing tangent space...\n";
 		model.getChunk(ei::IVec3(0))->computeTangentSpace(bim::Property::Val(bim::Property::NORMAL | bim::Property::TANGENT | bim::Property::BITANGENT));
 		std::cerr << "INF: building BVH...\n";
 		model.getChunk(ei::IVec3(0))->buildHierarchy(method);

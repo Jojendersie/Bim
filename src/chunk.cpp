@@ -189,7 +189,7 @@ namespace bim {
 		if(!m_texCoords2.empty()) m_texCoords2.resize(index);
 		if(!m_texCoords3.empty()) m_texCoords3.resize(index);
 		if(!m_colors.empty()) m_colors.resize(index);
-		std::cerr << "INF: remove vertices in/out: " << index << " / " << numVertices << '\n';
+		std::cerr << "INF: remove vertices out/in: " << index << " / " << numVertices << '\n';
 
 		// Rebuild index buffer
 		size_t numInvalidTriangles = 0;

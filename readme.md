@@ -26,13 +26,15 @@ An example for a JSON file looks as follows:
         "accelerator": "aabox",
         "cameras": {
             "controlVelocity": 2.5 // Allows to change the movement speed in the scene for interaction
-            "perspective": {
+            <camname>: {
+				"type": "perspective",
                 "scenario": ["stresstest"],
                 "position": [1.0, 2.0, 3.0],
                 "fov": 67.0,
                 "lookAt": [0.0, 0.0, 0.0]
-            }
-            "orthographic": {
+            },
+            <camname>: {
+				"type": "orthographic",
                 "scenario": ["baking"],
                 "direction": [0.0, 0.0, 1.0],
                 "position": [1.0, 2.0, 3.0],
@@ -42,8 +44,9 @@ An example for a JSON file looks as follows:
                 "bottom": -4.0,
                 "near": 0.0,
                 "far": 10.0,
-            }
-            "focus": {
+            },
+            <camname>: {
+				"type": "focus",
                 "scenario": ["day"],
                 "position": [1.0, 2.0, 3.0],
                 "lookAt": [0.0, 0.0, 0.0],
@@ -59,14 +62,15 @@ An example for a JSON file looks as follows:
             "toneMapper": {"type": "none"}
         },
         "materials": {
-            "physical": {
-                "name": <matname>,
+            <matname>: {
+                "type": "physical",
                 "albedo": [0.5, 0.5, 0.5],
                 "roughness": "rough.png"
             }
         },
         "lights": {
-            "point": {
+            <lightname>: {
+				"type": "point",
                 "position": [1, 2, 3],
                 "intensity": [10, 50, 10],
                 "scenario": ["day", "stresstest", ...]
@@ -88,10 +92,12 @@ The default is `aabox`.
 Defines the image resolution and post processing.
 
 `filter` `type` can be:
+
 * `none`  
 * `bilateral`: bilateral noise reduction. Has additional parameter `radius`.
 
 `toneMapper` `type` can be:
+
 * `none`  
 * `gamma`: gamma curve correction (will be made on Luma channel in YCoCg). Has additional parameter `exponent`.
 

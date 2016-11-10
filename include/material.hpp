@@ -8,8 +8,7 @@ namespace bim {
 	// Generic material class. It manages arbitrary properties without assumptions
 	// for the parametrization.
 	// A property from the scene-json file is either read as texture name (string)
-	// or as vector value. Values are always stored as Vec4 independent of their
-	// type or dimensionality. Unused parts are filled with zeros.
+	// or as vector value.
 	class Material
 	{
 	public:
@@ -20,9 +19,15 @@ namespace bim {
 		const std::string* getTexture(const std::string& _name) const;
 		// Get the value of some property. If the property does not exist return the
 		// default instead.
+		const float& get(const std::string& _name, const float _default = 0.0f) const;
+		const ei::Vec2& get(const std::string& _name, const ei::Vec2& _default = ei::Vec2(0.0f)) const;
+		const ei::Vec3& get(const std::string& _name, const ei::Vec3& _default = ei::Vec3(0.0f)) const;
 		const ei::Vec4& get(const std::string& _name, const ei::Vec4& _default = ei::Vec4(0.0f)) const;
 		const std::string& getName() const { return m_name; }
 		// Add or replace a value
+		void set(const std::string& _name, const float _value);
+		void set(const std::string& _name, const ei::Vec2& _value);
+		void set(const std::string& _name, const ei::Vec3& _value);
 		void set(const std::string& _name, const ei::Vec4& _value);
 		// Add or replace a texture value
 		void setTexture(const std::string& _name, std::string _textureFile);

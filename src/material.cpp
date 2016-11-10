@@ -15,7 +15,31 @@ namespace bim {
 		return nullptr;
 	}
 
-	const ei::Vec4& Material::get(const std::string& _name, const ei::Vec4& _default) const
+	const float & Material::get(const std::string & _name, const float _default) const
+	{
+		auto it = m_values.find(_name);
+		if(it != m_values.end())
+			return *reinterpret_cast<const float*>(&it->second);
+		return _default;
+	}
+
+	const ei::Vec2 & Material::get(const std::string & _name, const ei::Vec2 & _default) const
+	{
+		auto it = m_values.find(_name);
+		if(it != m_values.end())
+			return *reinterpret_cast<const ei::Vec2*>(&it->second);
+		return _default;
+	}
+
+	const ei::Vec3 & Material::get(const std::string & _name, const ei::Vec3 & _default) const
+	{
+		auto it = m_values.find(_name);
+		if(it != m_values.end())
+			return *reinterpret_cast<const ei::Vec3*>(&it->second);
+		return _default;
+	}
+
+	const ei::Vec4 & Material::get(const std::string & _name, const ei::Vec4 & _default) const
 	{
 		auto it = m_values.find(_name);
 		if(it != m_values.end())
@@ -23,7 +47,22 @@ namespace bim {
 		return _default;
 	}
 
-	void Material::set(const std::string& _name, const ei::Vec4& _value)
+	void Material::set(const std::string & _name, const float _value)
+	{
+		m_values[_name] = ei::Vec4(_value, 0.0f, 0.0f, 0.0f);
+	}
+
+	void Material::set(const std::string & _name, const ei::Vec2 & _value)
+	{
+		m_values[_name] = ei::Vec4(_value, 0.0f, 0.0f);
+	}
+
+	void Material::set(const std::string & _name, const ei::Vec3 & _value)
+	{
+		m_values[_name] = ei::Vec4(_value, 0.0f);
+	}
+
+	void Material::set(const std::string & _name, const ei::Vec4 & _value)
 	{
 		m_values[_name] = _value;
 	}

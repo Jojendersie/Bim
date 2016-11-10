@@ -7,6 +7,11 @@ namespace bim {
 	{
 	}
 
+	void Material::setType(std::string _type)
+	{
+		m_type = move(_type);
+	}
+
 	const std::string* Material::getTexture(const std::string& _name) const
 	{
 		auto it = m_textureNames.find(_name);

@@ -61,11 +61,15 @@ namespace bim {
 		uint numTreeLevels;
 	};
 
-	bool BinaryModel::load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, Property::Val _optionalProperties, bool _loadAll)
+	bool BinaryModel::load(const char* _envFile, Property::Val _requiredProperties, Property::Val _optionalProperties, bool _loadAll)
 	{
-		if(!loadEnv(_envFile)) return false;
+		std::string bimFile = loadEnv(_envFile, false);
+		if(bimFile.empty()) {
+			std::cerr << "The Environment-File did not contain a binary file reference!\n";
+			return false;
+		}
 
-		m_file.open(_bimFile, std::ios_base::binary);
+		m_file.open(bimFile, std::ios_base::binary);
 		if(m_file.fail()) {
 			std::cerr << "Cannot open scene file!\n";
 			return false;
@@ -144,7 +148,12 @@ namespace bim {
 		return true;
 	}
 
-	void BinaryModel::store(const char* _bimFile, const char* _envFile)
+	void BinaryModel::loadEnvironmentFile(const char * _envFile)
+	{
+		loadEnv(_envFile, true);
+	}
+
+	void BinaryModel::storeBinaryHeader(const char * _bimFile)
 	{
 		std::ofstream file(_bimFile, std::ios_base::binary | std::ios_base::out);
 		if(m_file.bad()) {std::cerr << "Cannot open file for writing!\n"; return;}
@@ -176,9 +185,6 @@ namespace bim {
 			file.write(str, len+1);
 			file.write(zeroBuf, 63 - len);
 		}
-
-		if(_envFile)
-			storeEnv(_envFile);
 	}
 
 	template<typename T>
@@ -416,51 +422,94 @@ namespace bim {
 			storeFileChunk(file, Property::NDF_SGGX, m_chunks[idx].m_nodeNDFs);
 	}
 
-	bool BinaryModel::loadEnv(const char* _envFile)
+	std::string BinaryModel::loadEnv(const char* _envFile, bool _ignoreBinary)
 	{
+		std::string binarySceneFile;
 		Json json;
-		Json::Value currentVal;
-		if(!json.open(_envFile, currentVal)) {
+		JsonValue rootNode;
+		if(!json.open(_envFile, rootNode)) {
 			std::cerr << "Opening environment JSON failed!\n";
-			return false;
+			return move(binarySceneFile);
 		}
 
-		// Iterate through all materials
-		if(json.child(currentVal, currentVal))
-		if(strcmp(currentVal.getName(), "materials") == 0)
-		{
-			if(json.child(currentVal, currentVal))
-			do {
-				Material mat;
-				mat.m_name = currentVal.getName();
-				Json::Value matProp;
-				if(json.child(currentVal, matProp))
-				// A material contains a list of strings or float (arrays).
-				do {
-					if(matProp.getType() == Json::ValueType::STRING)
-						mat.m_textureNames.emplace(matProp.getName(), matProp.getString());
-					else if(matProp.getType() == Json::ValueType::ARRAY)
-					{
-						// Assume a float vector
-						ei::Vec4 value(0.0f);
-						Json::Value v; json.child(matProp, v);
-						value[0] = v.getFloat();
-						if(json.next(v, v)) value[1] = v.getFloat();
-						if(json.next(v, v)) value[2] = v.getFloat();
-						if(json.next(v, v)) value[3] = v.getFloat();
-						mat.m_values.emplace(matProp.getName(), value);
-					} else if(matProp.getType() == Json::ValueType::FLOAT)
-						mat.m_values.emplace(matProp.getName(), ei::Vec4(matProp.getFloat(), 0.0f, 0.0f, 0.0f));
-					else if(matProp.getType() == Json::ValueType::INT)
-						mat.m_values.emplace(matProp.getName(), ei::Vec4((float)matProp.getInt(), 0.0f, 0.0f, 0.0f));
-				} while(json.next(matProp, matProp));
-				m_materials.push_back(mat);
-			} while(json.next(currentVal, currentVal));
-		}
-		return true;
+		JsonValue lvl1Node;
+		if(json.child(rootNode, lvl1Node)) do {
+			if(strcmp(lvl1Node.getName(), "materials") == 0) {
+				JsonValue materialNode;
+				if(json.child(lvl1Node, materialNode))
+					do { loadMaterial(json, materialNode); }
+					while(json.next(materialNode, materialNode));
+			} else if(strcmp(lvl1Node.getName(), "scene") && !_ignoreBinary) {
+				if(lvl1Node.getType() != JsonValue::Type::STRING) {
+					std::cerr << "Binary file name is not a valid string!\n";
+					return move(binarySceneFile);
+				} else binarySceneFile = lvl1Node.getString();
+			}
+		} while(json.next(lvl1Node, lvl1Node));
+
+		return move(binarySceneFile);
 	}
 
-	void BinaryModel::storeEnv(const char* _envFile)
+	void BinaryModel::loadMaterial(Json & json, const JsonValue & _matNode)
+	{
+		Material mat;
+		mat.m_name = _matNode.getName();
+		JsonValue matProp;
+		if(json.child(_matNode, matProp))
+			// A material contains a list of strings or float (arrays).
+			do {
+				if(matProp.getType() == JsonValue::Type::STRING) {
+					if(matProp.getName() == "type")
+						mat.setType(matProp.getString());
+					else
+						mat.m_textureNames.emplace(matProp.getName(), matProp.getString());
+				} else if(matProp.getType() == JsonValue::Type::ARRAY)
+				{
+					// Assume a float vector
+					ei::Vec4 value(0.0f);
+					JsonValue v; json.child(matProp, v);
+					value[0] = v.getFloat();
+					if(json.next(v, v)) value[1] = v.getFloat();
+					if(json.next(v, v)) value[2] = v.getFloat();
+					if(json.next(v, v)) value[3] = v.getFloat();
+					mat.m_values.emplace(matProp.getName(), value);
+				} else if(matProp.getType() == JsonValue::Type::FLOAT)
+					mat.m_values.emplace(matProp.getName(), ei::Vec4(matProp.getFloat(), 0.0f, 0.0f, 0.0f));
+				else if(matProp.getType() == JsonValue::Type::INT)
+					mat.m_values.emplace(matProp.getName(), ei::Vec4((float)matProp.getInt(), 0.0f, 0.0f, 0.0f));
+			} while(json.next(matProp, matProp));
+		m_materials.push_back(mat);
+	}
+
+	// Extract the relative path of _file with respect to base
+	static std::string makeRelative(const char* _base, const char* _file)
+	{
+		std::string relPath;
+		const char* baseDirBegin = _base;
+		const char* fileDirBegin = _file;
+		bool diverged = false;
+		while(*_base != 0 && *_file != 0)
+		{
+			if(*_base != *_file || diverged)
+			{
+				diverged = true;
+				if(*_base == '\\' || *_base == '/') relPath += "../";
+			} else {
+				if(*_base == '\\' || *_base == '/') {
+					baseDirBegin = _base;
+					fileDirBegin = _file;
+				}
+			}
+			++_base; ++_file;
+		}
+		if(*fileDirBegin == '\\' || *fileDirBegin == '/')
+			relPath += fileDirBegin + 1;
+		else
+			relPath += fileDirBegin;
+		return move(relPath);
+	}
+
+	void BinaryModel::storeEnvironmentFile(const char* _envFile, const char* _bimFile)
 	{
 		JsonWriter json;
 		if(!json.open(_envFile)) {
@@ -468,12 +517,17 @@ namespace bim {
 			return;
 		}
 		json.beginObject();
+		json.valuePreamble("scene");
+		json.value(makeRelative(_envFile, _bimFile).c_str());
+
 		json.valuePreamble("materials");
 		json.beginObject();
 		for(auto& mat : m_materials)
 		{
 			json.valuePreamble(mat.getName().c_str());
 			json.beginObject();
+			json.valuePreamble("type");
+			json.value(mat.getType().c_str());
 			for(auto& tex : mat.m_textureNames)
 			{
 				json.valuePreamble(tex.first.c_str());

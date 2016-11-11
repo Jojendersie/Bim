@@ -26,7 +26,7 @@ namespace bim {
 		const std::string* getTexture(const std::string& _name) const;
 		// Get the value of some property. If the property does not exist return the
 		// default instead.
-		const float& get(const std::string& _name, const float _default = 0.0f) const;
+		const float get(const std::string& _name, const float _default = 0.0f) const;
 		const ei::Vec2& get(const std::string& _name, const ei::Vec2& _default = ei::Vec2(0.0f)) const;
 		const ei::Vec3& get(const std::string& _name, const ei::Vec3& _default = ei::Vec3(0.0f)) const;
 		const ei::Vec4& get(const std::string& _name, const ei::Vec4& _default = ei::Vec4(0.0f)) const;

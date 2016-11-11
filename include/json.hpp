@@ -2,10 +2,9 @@
 
 #include <vector>
 
-class Json
+struct JsonValue
 {
-public:
-	enum class ValueType
+	enum class Type
 	{
 		OBJECT,
 		ARRAY,
@@ -15,47 +14,48 @@ public:
 		BOOL
 	};
 
-	struct Value
-	{
-		ValueType getType() const { return type; }
-		const char* getName() const { return name; }
+	Type getType() const { return type; }
+	const char* getName() const { return name; }
 
-		// Not type safe!
-		// Be sure the type is appropriate before calling one of the following.
-		const char* getString() const { return _string; }
-		float getFloat() const { return type == ValueType::INT ? float(_int) : _float; }
-		int getInt() const { return type == ValueType::INT ? _int : int(_float); }
-		bool getBool() const { return _bool; }
-	private:
-		friend class Json;
-		ValueType type;
-		const char* name;
-		unsigned offset;	// Offset in the input stream
-		union {
-			const char* _string;
-			float _float;
-			int _int;
-			bool _bool;
-		};
+	// Not type safe!
+	// Be sure the type is appropriate before calling one of the following.
+	const char* getString() const { return _string; }
+	float getFloat() const { return type == Type::INT ? float(_int) : _float; }
+	int getInt() const { return type == Type::INT ? _int : int(_float); }
+	bool getBool() const { return _bool; }
+private:
+	friend class Json;
+	Type type;
+	const char* name;
+	unsigned offset;	// Offset in the input stream
+	union {
+		const char* _string;
+		float _float;
+		int _int;
+		bool _bool;
 	};
+};
 
+class Json
+{
+public:
 	// Open a file and get the root node
-	bool open(const char* _file, Value& _root);
+	bool open(const char* _file, JsonValue& _root);
 	// Go to the next node one the same level
 	// [out] _next Writes output value to this buffer. Can be the same as _current.
 	// Returns false if no next element can be read
-	bool next(const Value& _current, Value& _next);
+	bool next(const JsonValue& _current, JsonValue& _next);
 	// Go to the first child of the value
 	// [out] _next Writes output value to this buffer. Can be the same as _current.
 	// Returns false if no child element can be read
-	bool child(const Value& _current, Value& _next);
+	bool child(const JsonValue& _current, JsonValue& _next);
 private:
 	char* m_readPos;
 	const char* m_tokenPos; // Token has length m_readPos - m_tokenPos
 	std::vector<char> m_fileContent;
 
-	bool readProperty(Value& _next);
-	bool readValue(Value& _next);
+	bool readProperty(JsonValue& _next);
+	bool readValue(JsonValue& _next);
 	bool readToken();
 };
 
@@ -85,7 +85,7 @@ private:
 // ************************************************************************* //
 // ************************************************************************* //
 
-bool Json::open(const char* _file, Value& _root)
+inline bool Json::open(const char* _file, JsonValue& _root)
 {
 	FILE* file = fopen(_file, "rb");
 	if(!file) return false;
@@ -100,12 +100,12 @@ bool Json::open(const char* _file, Value& _root)
 	fclose(file);
 
 	_root.offset = 0;
-	_root.type = ValueType::OBJECT;
+	_root.type = JsonValue::Type::OBJECT;
 	_root.name = "_root_";
 	return true;
 }
 
-bool Json::next(const Value& _current, Value& _next)
+inline bool Json::next(const JsonValue& _current, JsonValue& _next)
 {
 	m_readPos = m_fileContent.data() + _current.offset;
 	// Iterate through the stream to the next ','. Meanwhile the number of
@@ -121,18 +121,18 @@ bool Json::next(const Value& _current, Value& _next)
 	return true;
 }
 
-bool Json::child(const Value& _current, Value& _next)
+inline bool Json::child(const JsonValue& _current, JsonValue& _next)
 {
 	m_readPos = m_fileContent.data() + _current.offset;
 	if(!readToken()) return false;
-	if(_current.type == ValueType::ARRAY)
+	if(_current.type == JsonValue::Type::ARRAY)
 	{
 		// Next token is '[' otherwise the type would have been wrong
 		if(m_tokenPos[0] != '[') return false;
 		// Read array value directly
 		if(!readToken()) return false;
 		return readValue(_next);
-	} else if( _current.type == ValueType::OBJECT)
+	} else if( _current.type == JsonValue::Type::OBJECT)
 	{
 		// Next token is '{' otherwise the type would have been wrong
 		if(m_tokenPos[0] != '{') return false;
@@ -142,7 +142,7 @@ bool Json::child(const Value& _current, Value& _next)
 	return false;
 }
 
-bool Json::readProperty(Value& _next)
+inline bool Json::readProperty(JsonValue& _next)
 {
 	// Read "name": ...
 	if(!readToken()) return false;
@@ -158,32 +158,32 @@ bool Json::readProperty(Value& _next)
 	return readValue(_next);
 }
 
-bool Json::readValue(Value& _next)
+inline bool Json::readValue(JsonValue& _next)
 {
 	_next.offset = unsigned(m_tokenPos - m_fileContent.data());
 //	if(!readToken()) return false;
 	switch(m_tokenPos[0])
 	{
-	case 't': _next.type = ValueType::BOOL; _next._bool = true; break;
-	case 'b': _next.type = ValueType::BOOL; _next._bool = false; break;
-	case '"': _next.type = ValueType::STRING; if(!readToken()) return false; *m_readPos = '\0'; _next._string = m_tokenPos; break;
-	case '[': _next.type = ValueType::ARRAY; break;
-	case '{': _next.type = ValueType::OBJECT; break;
+	case 't': _next.type = JsonValue::Type::BOOL; _next._bool = true; break;
+	case 'b': _next.type = JsonValue::Type::BOOL; _next._bool = false; break;
+	case '"': _next.type = JsonValue::Type::STRING; if(!readToken()) return false; *m_readPos = '\0'; _next._string = m_tokenPos; break;
+	case '[': _next.type = JsonValue::Type::ARRAY; break;
+	case '{': _next.type = JsonValue::Type::OBJECT; break;
 	default: {
 		char nextChar = *m_readPos;
 		*m_readPos = 0; // Zero termination for current token
 		// Search the decimal '.'
 		const char* c = m_tokenPos;
 		while(c != m_readPos && *c != '.') ++c;
-		if(*c == '.') { _next.type = ValueType::FLOAT; _next._float = (float)atof(m_tokenPos); }
-		else { _next.type = ValueType::INT; _next._int = atoi(m_tokenPos); }
+		if(*c == '.') { _next.type = JsonValue::Type::FLOAT; _next._float = (float)atof(m_tokenPos); }
+		else { _next.type = JsonValue::Type::INT; _next._int = atoi(m_tokenPos); }
 		*m_readPos = nextChar;
 	} break;
 	}
 	return true;
 }
 
-bool Json::readToken()
+inline bool Json::readToken()
 {
 	if(m_readPos == &m_fileContent.back()) return false;
 	// Skip white spaces
@@ -209,13 +209,13 @@ bool Json::readToken()
 
 // ************************************************************************* //
 
-bool JsonWriter::open(const char* _file)
+inline bool JsonWriter::open(const char* _file)
 {
 	m_outFile = fopen(_file, "wb");
 	return m_outFile != nullptr;
 }
 
-void JsonWriter::beginObject()
+inline void JsonWriter::beginObject()
 {
 	if(m_lastMode == Mode::NEWLINE)
 		for(int i = 0; i < m_idention; ++i)
@@ -225,7 +225,7 @@ void JsonWriter::beginObject()
 	m_lastMode = Mode::NEWLINE;
 }
 
-void JsonWriter::endObject()
+inline void JsonWriter::endObject()
 {
 	if(m_lastMode == Mode::ENDLINE)
 		fwrite("\n", 1, 1, m_outFile);
@@ -236,7 +236,7 @@ void JsonWriter::endObject()
 	m_lastMode = Mode::ENDLINE;
 }
 
-void JsonWriter::valuePreamble(const char* _valueName)
+inline void JsonWriter::valuePreamble(const char* _valueName)
 {
 	if(m_lastMode == Mode::ENDLINE)
 		fwrite(",\n", 2, 1, m_outFile);
@@ -248,7 +248,7 @@ void JsonWriter::valuePreamble(const char* _valueName)
 	m_lastMode = Mode::PREAMBLE;
 }
 
-void JsonWriter::value(const char* _string)
+inline void JsonWriter::value(const char* _string)
 {
 	fwrite("\"", 1, 1, m_outFile);
 	fwrite(_string, strlen(_string), 1, m_outFile);
@@ -256,7 +256,7 @@ void JsonWriter::value(const char* _string)
 	m_lastMode = Mode::ENDLINE;
 }
 
-void JsonWriter::value(float* _floatArray, int _num)
+inline void JsonWriter::value(float* _floatArray, int _num)
 {
 	if(_num == 1)
 		fprintf(m_outFile, "%g", _floatArray[0]);

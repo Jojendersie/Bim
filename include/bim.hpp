@@ -5,6 +5,9 @@
 #include <fstream>
 #include <ei/3dtypes.hpp>
 
+class Json;
+struct JsonValue;
+
 namespace bim {
 
 	/// Main interface to load and access data in a .bim file.
@@ -20,16 +23,23 @@ namespace bim {
 		
 		/// Preload the model meta informations.
 		/// To truly load the data call makeChunkResident() for the portions you need.
-		/// \param [in] _bimFile Name of the binary file containing the scene graph
-		///		and mesh information.
 		/// \param [in] _envFile A JSON file with material and lighting information.
 		/// \param [in] _optionalProperties If existent load these properties, but do not create empty defaults.
 		///	\param [in] _loadAll Also load properties which are not requested.
-		/// \return true on success.
-		bool load(const char* _bimFile, const char* _envFile, Property::Val _requiredProperties, Property::Val _optionalProperties = Property::DONT_CARE, bool _loadAll = false);
+		/// \return true on success. Fails, if the _envFile does not reference a valid binary file.
+		bool load(const char* _envFile, Property::Val _requiredProperties, Property::Val _optionalProperties = Property::DONT_CARE, bool _loadAll = false);
+		/// Load the json file with material, lighting,... informations.
+		/// Referenced binary data will be ignored.
+		/// \param [in] _envFile A JSON file.
+		void loadEnvironmentFile(const char* _envFile);
 		
-		/// Stores global information like material but without chunks.
-		void store(const char* _bimFile, const char* _envFile);
+		/// Stores global information like material and lights.
+		/// \param [in] _bimFile Name of the binary file which should be referenced by
+		///		the environment (scene) file.
+		void storeEnvironmentFile(const char* _envFile, const char* _bimFile);
+		/// Store meta file chunks (e.g. number of chunks) into the binary file.
+		/// This must be called before any chunk is stored.
+		void storeBinaryHeader(const char* _bimFile);
 		/// Appends a chunk to the file (expecting the other information already exist).
 		void storeChunk(const char* _bimFile, const ei::IVec3& _chunkPos);
 		
@@ -67,8 +77,8 @@ namespace bim {
 		void setNumTrianglesPerLeaf(uint _numTrianglesPerLeaf) { m_numTrianglesPerLeaf = m_numTrianglesPerLeaf; }
 		uint getNumTrianglesPerLeaf() const { return m_numTrianglesPerLeaf; }
 	private:
-		bool loadEnv(const char* _envFile);
-		void storeEnv(const char* _envFile);
+		std::string loadEnv(const char* _envFile, bool _ignoreBinary);
+		void loadMaterial(Json & json, const JsonValue & _matNode);
 
 		enum class ChunkState {
 			LOADED,

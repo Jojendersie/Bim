@@ -310,7 +310,8 @@ int main(int _numArgs, const char** _args)
 		}
 	}
 	std::cerr << "INF: storing model...\n";
-	model.store(outputBimFile.c_str(), outputJsonFile.c_str());
+	model.storeEnvironmentFile(outputJsonFile.c_str(), outputBimFile.c_str());
+	model.storeBinaryHeader(outputBimFile.c_str());
 	//foreach chunk
 	model.storeChunk(outputBimFile.c_str(), ei::IVec3(0));
 	return 0;

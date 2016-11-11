@@ -13,7 +13,7 @@ namespace bim {
 	{
 	public:
 		Material() = default;
-		Material(std::string _name);
+		Material(std::string _name, std::string _type);
 
 		const std::string& getName() const { return m_name; }
 		// Set and get a generic type name. Since this library makes no

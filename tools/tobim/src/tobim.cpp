@@ -136,7 +136,7 @@ void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
 		aiString aiTmpStr;
 		// Get name and create new material with that name
 		mat->Get( AI_MATKEY_NAME, aiTmpStr );
-		bim::Material material(aiTmpStr.C_Str());
+		bim::Material material(aiTmpStr.C_Str(), "legacy");
 
 		// Check if the material was imported before
 		if(_bim.findMaterial(material.getName()) != -1)
@@ -170,7 +170,7 @@ void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
 		} else {
 			float shininess = 1.0f;
 			mat->Get( AI_MATKEY_SHININESS, shininess );
-			material.set("shininess", ei::Vec4(shininess, 0.0f, 0.0f, 0.0f));
+			material.set("reflectivity", ei::Vec4(shininess, 0.0f, 0.0f, 0.0f));
 			material.set("roughness", ei::Vec4(1.0f / (shininess * shininess), 0.0f, 0.0f, 0.0f));
 		}
 

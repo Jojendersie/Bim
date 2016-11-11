@@ -2,8 +2,9 @@
 
 namespace bim {
 
-	Material::Material(std::string _name) :
-		m_name(move(_name))
+	Material::Material(std::string _name, std::string _type) :
+		m_name(move(_name)),
+		m_type(move(_type))
 	{
 	}
 

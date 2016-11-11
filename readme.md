@@ -161,6 +161,7 @@ There are several types of materials:
     opacity         Degree of opacity (1-transparentcy) [0,1] (S).                  {1.0}
                     Color is taken from albedo.
     refractionIdxN  First part of complex valued refraction index. (S)              {1.3}
+	emissivity      Exitant radiant energy (RGB) [cd/m^2]                           {0, 0, 0}
 
 
 where `(S)` is a scalar, `(RGB)` is an RGB color in [0,1]^3, `[]` note value intervals or units and `{x}` the default values.

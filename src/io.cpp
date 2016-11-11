@@ -61,6 +61,19 @@ namespace bim {
 		uint numTreeLevels;
 	};
 
+	std::string pathOf(const char* _file)
+	{
+		const char* begin = _file;
+		const char* end = _file;
+		while(*_file != 0)
+		{
+			if(*_file == '\\' || *_file == '/')
+				end = _file + 1;
+			++_file;
+		}
+		return std::string(begin, end);
+	}
+
 	bool BinaryModel::load(const char* _envFile, Property::Val _requiredProperties, Property::Val _optionalProperties, bool _loadAll)
 	{
 		std::string bimFile = loadEnv(_envFile, false);
@@ -68,6 +81,9 @@ namespace bim {
 			std::cerr << "The Environment-File did not contain a binary file reference!\n";
 			return false;
 		}
+
+		// The bimFile is a relative path -> append the path from the envFile.
+		bimFile = pathOf(_envFile) + bimFile;
 
 		m_file.open(bimFile, std::ios_base::binary);
 		if(m_file.fail()) {
@@ -439,7 +455,7 @@ namespace bim {
 				if(json.child(lvl1Node, materialNode))
 					do { loadMaterial(json, materialNode); }
 					while(json.next(materialNode, materialNode));
-			} else if(strcmp(lvl1Node.getName(), "scene") && !_ignoreBinary) {
+			} else if(strcmp(lvl1Node.getName(), "scene") == 0 && !_ignoreBinary) {
 				if(lvl1Node.getType() != JsonValue::Type::STRING) {
 					std::cerr << "Binary file name is not a valid string!\n";
 					return move(binarySceneFile);

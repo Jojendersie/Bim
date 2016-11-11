@@ -166,7 +166,7 @@ inline bool Json::readValue(JsonValue& _next)
 	{
 	case 't': _next.type = JsonValue::Type::BOOL; _next._bool = true; break;
 	case 'b': _next.type = JsonValue::Type::BOOL; _next._bool = false; break;
-	case '"': _next.type = JsonValue::Type::STRING; if(!readToken()) return false; *m_readPos = '\0'; _next._string = m_tokenPos; break;
+	case '"': _next.type = JsonValue::Type::STRING; if(!readToken()) return false; m_readPos[*m_tokenPos == '"' ? -1 : 0] = '\0'; _next._string = m_tokenPos; break;
 	case '[': _next.type = JsonValue::Type::ARRAY; break;
 	case '{': _next.type = JsonValue::Type::OBJECT; break;
 	default: {
@@ -203,7 +203,8 @@ inline bool Json::readToken()
 		if(m_readPos == &m_fileContent.back()) return false;
 	}
 	// If the token is a printable separator its length is 0 here
-	if(m_readPos == m_tokenPos) ++m_readPos;
+	if(m_readPos == m_tokenPos)
+		++m_readPos;
 	return true;
 }
 

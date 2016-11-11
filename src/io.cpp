@@ -475,7 +475,7 @@ namespace bim {
 			// A material contains a list of strings or float (arrays).
 			do {
 				if(matProp.getType() == JsonValue::Type::STRING) {
-					if(matProp.getName() == "type")
+					if(strcmp(matProp.getName(), "type") == 0)
 						mat.setType(matProp.getString());
 					else
 						mat.m_textureNames.emplace(matProp.getName(), matProp.getString());

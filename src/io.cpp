@@ -106,8 +106,13 @@ namespace bim {
 		m_loadAll = _loadAll;
 		// Make sure at least positions and triangles are available
 		m_requestedProps = Property::Val(_requiredProperties | Property::POSITION | Property::TRIANGLE_IDX);
+		// Use the accelerator from environment file or load a default if hierarchy is required.
 		if(m_accelerator != Property::DONT_CARE)
-			m_requestedProps = Property::Val(_requiredProperties | m_accelerator);
+			m_requestedProps = Property::Val(m_requestedProps | m_accelerator);
+		else if((_requiredProperties & Property::HIERARCHY)
+			&& !(_requiredProperties & Property::AABOX_BVH)
+			&& !(_requiredProperties & Property::OBOX_BVH))
+			m_requestedProps = Property::Val(m_requestedProps | Property::AABOX_BVH);
 		m_optionalProperties = _optionalProperties;
 		m_numChunks = meta.numChunks;
 		m_numTrianglesPerLeaf = meta.numTrianglesPerLeaf;
@@ -463,8 +468,8 @@ namespace bim {
 					return move(binarySceneFile);
 				} else binarySceneFile = lvl1Node.getString();
 			} else if(strcmp(lvl1Node.getName(), "accelerator") == 0) {
-				if(strcmp(lvl1Node.getString(), "aabox")) m_accelerator = Property::AABOX_BVH;
-				else if(strcmp(lvl1Node.getString(), "obox")) m_accelerator = Property::OBOX_BVH;
+				if(strcmp(lvl1Node.getString(), "aabox") == 0) m_accelerator = Property::AABOX_BVH;
+				else if(strcmp(lvl1Node.getString(), "obox") == 0) m_accelerator = Property::OBOX_BVH;
 				else std::cerr << "Unknown accelerator in environment file. Only 'aabox' and 'obox' are valid.\n";
 			}
 		} while(json.next(lvl1Node, lvl1Node));

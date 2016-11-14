@@ -42,16 +42,19 @@ namespace bim {
 				triTangent = (uvb.y * e0 - uva.y * e1) / det;
 				triBitangent = (uva.x * e1 - uvb.x * e0) / det;
 				// Try to recover direction if it got NaN
-				if(len(triTangent) < 1e-3f && len(triBitangent) < 1e-3f)
+				bool invalidTangent = !all(triTangent == triTangent) || len(triTangent) < 1e-10f;
+				bool invalidBitangent = !all(triBitangent == triBitangent) || len(triBitangent) < 1e-10f;
+				if(invalidTangent && invalidBitangent)
 				{
 					// Create a random orthonormal basis (no uv given)
 					triTangent = Vec3(1.0f, triNormal.x, 0.0f);
 					triBitangent = Vec3(0.0f, triNormal.z, 1.0f);
-				} else if(!all(triTangent == triTangent) || len(triTangent) < 1e-3f)
+				} else if(invalidTangent)
 					triTangent = cross(triBitangent, triNormal) * det;
-				else if(!all(triBitangent == triBitangent) || len(triBitangent) < 1e-3f)
-					triBitangent = cross(triNormal, triTangent) * det;
-				ei::orthonormalize(triNormal, triTangent, triBitangent);
+				else if(invalidBitangent)
+						triBitangent = cross(triNormal, triTangent) * det;
+				if(!ei::orthonormalize(triNormal, triTangent, triBitangent))
+					triBitangent = cross(triNormal, triTangent);
 				eiAssert(all(triTangent == triTangent), "NaN in tangent computation!");
 				eiAssert(all(triBitangent == triBitangent), "NaN in bitangent computation!");
 				eiAssert(approx(len(triTangent), 1.0f, 1e-4f), "Computed tangent has a wrong length!");

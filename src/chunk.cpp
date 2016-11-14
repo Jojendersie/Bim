@@ -119,8 +119,18 @@ namespace bim {
 	{
 		invalidateHierarchy();
 
+		// Find shortest edge to determine the epsilon
+		float epsilonSq = 1e30f;
+		for(size_t i = 0; i < m_triangles.size(); ++i)
+		{
+			epsilonSq = ei::min(epsilonSq, lensq(m_positions[m_triangles[i].y] - m_positions[m_triangles[i].x]));
+			epsilonSq = ei::min(epsilonSq, lensq(m_positions[m_triangles[i].z] - m_positions[m_triangles[i].x]));
+			epsilonSq = ei::min(epsilonSq, lensq(m_positions[m_triangles[i].z] - m_positions[m_triangles[i].y]));
+		}
+		epsilonSq *= 0.9f;
+
 		//std::unordered_map<FullVertex, uint> vertexToIndex;
-		HashGrid<3, FullVertex, uint32> vertexToIndex(m_boundingBox.min, m_boundingBox.max, ei::Vec3(1e-4f));
+		HashGrid<3, FullVertex, uint32> vertexToIndex(m_boundingBox.min, m_boundingBox.max, ei::Vec3(sqrt(epsilonSq)));
 		uint index = 0;
 		size_t numVertices = m_positions.size();
 		// Initialize the index mapping to index->self
@@ -144,8 +154,8 @@ namespace bim {
 			if(!m_texCoords3.empty()) key.texCoord3 = m_texCoords3[i];
 			if(!m_colors.empty()) key.color = m_colors[i];
 			// Get the index
-			const uint32* it = vertexToIndex.find(key, [](const FullVertex& _lhs, const FullVertex& _rhs){
-				if(lensq(_lhs.position - _rhs.position) > 1e-8f) return false;
+			const uint32* it = vertexToIndex.find(key, [epsilonSq](const FullVertex& _lhs, const FullVertex& _rhs){
+				if(lensq(_lhs.position - _rhs.position) > epsilonSq) return false;
 				if(lensq(_lhs.normal - _rhs.normal) > 1e-6f) return false;
 				if(lensq(_lhs.tangent - _rhs.tangent) > 1e-6f) return false;
 				if(lensq(_lhs.bitangent - _rhs.bitangent) > 1e-6f) return false;

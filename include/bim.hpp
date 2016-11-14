@@ -76,6 +76,13 @@ namespace bim {
 		/// Global parameter for the chunk->buildHierarchy().
 		void setNumTrianglesPerLeaf(uint _numTrianglesPerLeaf) { m_numTrianglesPerLeaf = m_numTrianglesPerLeaf; }
 		uint getNumTrianglesPerLeaf() const { return m_numTrianglesPerLeaf; }
+
+		/// Returns the acceleration structure type as specified by the environment file.
+		/// \return One of AABOX_BVH, OBOX_BVH or SPHERE_BVH.
+		Property::Val getAccelerator() const { return m_accelerator; }
+		/// Set one of AABOX_BVH, OBOX_BVH or SPHERE_BVH as the accelerator to be used.
+		/// If the property does not exist this command will do nothing.
+		void setAccelerator(Property::Val _accelerator) { if(m_chunks[0].m_properties & _accelerator) m_accelerator = _accelerator; }
 	private:
 		std::string loadEnv(const char* _envFile, bool _ignoreBinary);
 		void loadMaterial(Json & json, const JsonValue & _matNode);
@@ -96,6 +103,7 @@ namespace bim {
 		std::vector<uint> m_materialIndirection;
 		Property::Val m_requestedProps;	///< All properties for which the getter should succeed.
 		Property::Val m_optionalProperties;
+		Property::Val m_accelerator;	///< Chosen kind of acceleration structure (specified by environment file)
 		bool m_loadAll;					///< If a chunk is loaded, load all available data or only the required part
 		ei::Box m_boundingBox;
 		uint m_numTrianglesPerLeaf;		///< When the hierarchy is build the number of triangles per leaf node is set as parameter

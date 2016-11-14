@@ -309,6 +309,10 @@ int main(int _numArgs, const char** _args)
 			model.getChunk(ei::IVec3(0))->computeBVHSGGXApproximations();
 		}
 	}
+	// Set an accelerator if possible. Prefer AABOX (last line will win if multiple BVH are given)
+	if(computeOB) model.setAccelerator(bim::Property::OBOX_BVH);
+	if(computeAAB) model.setAccelerator(bim::Property::AABOX_BVH);
+
 	std::cerr << "INF: storing model...\n";
 	model.storeEnvironmentFile(outputJsonFile.c_str(), outputBimFile.c_str());
 	model.storeBinaryHeader(outputBimFile.c_str());

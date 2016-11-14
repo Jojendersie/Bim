@@ -8,6 +8,7 @@ namespace bim {
 		m_chunkStates(1, ChunkState::LOADED),	// Chunk exists, but is empty (no mesh data)
 		m_chunks(1),
 		m_requestedProps(Property::Val(_properties | Property::POSITION | Property::TRIANGLE_IDX)),
+		m_accelerator(Property::DONT_CARE),
 		m_loadAll(false),
 		m_numTrianglesPerLeaf(2)
 	{

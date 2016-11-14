@@ -493,17 +493,17 @@ namespace bim {
 				} else if(matProp.getType() == JsonValue::Type::ARRAY)
 				{
 					// Assume a float vector
-					ei::Vec4 value(0.0f);
+					Material::MultiValue value({0.0f, 1});
 					JsonValue v; json.child(matProp, v);
-					value[0] = v.getFloat();
-					if(json.next(v, v)) value[1] = v.getFloat();
-					if(json.next(v, v)) value[2] = v.getFloat();
-					if(json.next(v, v)) value[3] = v.getFloat();
+					value.values[0] = v.getFloat();
+					if(json.next(v, v)) {value.values[1] = v.getFloat(); value.numComponents = 2;}
+					if(json.next(v, v)) {value.values[2] = v.getFloat(); value.numComponents = 2;}
+					if(json.next(v, v)) {value.values[3] = v.getFloat(); value.numComponents = 2;}
 					mat.m_values.emplace(matProp.getName(), value);
 				} else if(matProp.getType() == JsonValue::Type::FLOAT)
-					mat.m_values.emplace(matProp.getName(), ei::Vec4(matProp.getFloat(), 0.0f, 0.0f, 0.0f));
+					mat.m_values.emplace(matProp.getName(), Material::MultiValue{ei::Vec4(matProp.getFloat(), 0.0f, 0.0f, 0.0f), 1});
 				else if(matProp.getType() == JsonValue::Type::INT)
-					mat.m_values.emplace(matProp.getName(), ei::Vec4((float)matProp.getInt(), 0.0f, 0.0f, 0.0f));
+					mat.m_values.emplace(matProp.getName(), Material::MultiValue{ei::Vec4((float)matProp.getInt(), 0.0f, 0.0f, 0.0f), 1});
 			} while(json.next(matProp, matProp));
 		m_materials.push_back(mat);
 	}
@@ -572,7 +572,7 @@ namespace bim {
 			for(auto& val : mat.m_values)
 			{
 				json.valuePreamble(val.first.c_str());
-				json.value(val.second.m_data, 4);
+				json.value(val.second.values.m_data, val.second.numComponents);
 			}
 			json.endObject();
 		}

@@ -39,7 +39,12 @@ namespace bim {
 		void setTexture(const std::string& _name, std::string _textureFile);
 	private:
 		std::unordered_map<std::string, std::string> m_textureNames;
-		std::unordered_map<std::string, ei::Vec4> m_values;
+		struct MultiValue
+		{
+			ei::Vec4 values;
+			int numComponents;
+		};
+		std::unordered_map<std::string, MultiValue> m_values;
 		std::string m_name;
 		std::string m_type;
 		friend class BinaryModel;

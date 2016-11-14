@@ -70,8 +70,8 @@ void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4
 	for(uint i = 0; i < _node->mNumMeshes; ++i)
 	{
 		const aiMesh* mesh = _scene->mMeshes[ _node->mMeshes[i] ];
-		bim::Chunk::FullVertex newVertex;
-		//uint32 indexOffset = chunk.getNumVertices();
+		bim::Chunk::FullVertex newVertex[3];
+		uint32 skippedTriangles = 0;
 
 		// Find the material entry
 		uint32 materialIndex = 0;
@@ -92,29 +92,39 @@ void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4
 				// Fill the vertex
 				ei::Vec3 tmp;
 				memcpy(&tmp, &mesh->mVertices[face.mIndices[j]], sizeof(ei::Vec3));
-				newVertex.position = ei::transform(tmp, nodeTransform);
+				newVertex[j].position = ei::transform(tmp, nodeTransform);
 				memcpy(&tmp, &mesh->mNormals[face.mIndices[j]], sizeof(ei::Vec3));
-				newVertex.normal = ei::transform(tmp, invTransTransform);
+				newVertex[j].normal = ei::transform(tmp, invTransTransform);
 				if(mesh->HasTangentsAndBitangents())
 				{
 					memcpy(&tmp, &mesh->mTangents[face.mIndices[j]], sizeof(ei::Vec3));
-					newVertex.tangent = ei::transform(tmp, invTransTransform);
+					newVertex[j].tangent = ei::transform(tmp, invTransTransform);
 					memcpy(&tmp, &mesh->mBitangents[face.mIndices[j]], sizeof(ei::Vec3));
-					newVertex.bitangent = ei::transform(tmp, invTransTransform);
+					newVertex[j].bitangent = ei::transform(tmp, invTransTransform);
 				}
-				if(mesh->HasTextureCoords(0)) memcpy(&newVertex.texCoord0, &mesh->mTextureCoords[0][face.mIndices[j]], sizeof(ei::Vec2));
-				if(mesh->HasTextureCoords(1)) memcpy(&newVertex.texCoord1, &mesh->mTextureCoords[1][face.mIndices[j]], sizeof(ei::Vec2));
-				if(mesh->HasTextureCoords(2)) memcpy(&newVertex.texCoord2, &mesh->mTextureCoords[2][face.mIndices[j]], sizeof(ei::Vec2));
-				if(mesh->HasTextureCoords(3)) memcpy(&newVertex.texCoord3, &mesh->mTextureCoords[3][face.mIndices[j]], sizeof(ei::Vec2));
-				if(mesh->HasVertexColors(0)) memcpy(&newVertex.color, &mesh->mColors[0][face.mIndices[j]], sizeof(ei::Vec2));
-				// Add vertex and get its index for the triangle
-				triangleIndices[j] = chunk.getNumVertices();
-				chunk.addVertex(newVertex);
-				//triangleIndices[j] = face.mIndices[j] + indexOffset;
-				//chunk.setVertex(triangleIndices[j], newVertex);
+				if(mesh->HasTextureCoords(0)) memcpy(&newVertex[j].texCoord0, &mesh->mTextureCoords[0][face.mIndices[j]], sizeof(ei::Vec2));
+				if(mesh->HasTextureCoords(1)) memcpy(&newVertex[j].texCoord1, &mesh->mTextureCoords[1][face.mIndices[j]], sizeof(ei::Vec2));
+				if(mesh->HasTextureCoords(2)) memcpy(&newVertex[j].texCoord2, &mesh->mTextureCoords[2][face.mIndices[j]], sizeof(ei::Vec2));
+				if(mesh->HasTextureCoords(3)) memcpy(&newVertex[j].texCoord3, &mesh->mTextureCoords[3][face.mIndices[j]], sizeof(ei::Vec2));
+				if(mesh->HasVertexColors(0)) memcpy(&newVertex[j].color, &mesh->mColors[0][face.mIndices[j]], sizeof(ei::Vec2));
 			}
-			chunk.addTriangle(triangleIndices, materialIndex);
+			// Detect degenerated triangles
+			float area2 = len(cross(newVertex[1].position - newVertex[0].position, newVertex[2].position - newVertex[0].position));
+			if(abs(area2) > 1e-10f)
+			{
+				for(int j = 0; j < 3; ++j)
+				{
+					// Add vertex and get its index for the triangle
+					triangleIndices[j] = chunk.getNumVertices();
+					chunk.addVertex(newVertex[j]);
+				}
+				chunk.addTriangle(triangleIndices, materialIndex);
+			} else
+				skippedTriangles++;
 		}
+
+		if(skippedTriangles)
+			std::cerr << "WAR: Skipped " << skippedTriangles << " degenerated triangles in mesh " << _node->mMeshes[i]  << "\n";
 	}
 
 	// Import all child nodes
@@ -149,7 +159,7 @@ void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
 		} else {
 			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
 			mat->Get( AI_MATKEY_COLOR_DIFFUSE, color );
-			material.set("albedo", ei::Vec4(color.r, color.g, color.b, 0.0f));
+			material.set("albedo", ei::Vec3(color.r, color.g, color.b));
 		}
 
 		// Load specular
@@ -161,17 +171,17 @@ void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
 			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
 			if( mat->Get( AI_MATKEY_COLOR_REFLECTIVE, color ) != AI_SUCCESS )
 				mat->Get( AI_MATKEY_COLOR_SPECULAR, color );
-			material.set("specularColor", ei::Vec4(color.r, color.g, color.b, 0.0f));
+			material.set("specularColor", ei::Vec3(color.r, color.g, color.b));
 		}
 		if( mat->GetTexture( aiTextureType_SHININESS, 0, &aiTmpStr ) == AI_SUCCESS )
 		{
 			material.setTexture("shininess", aiTmpStr.C_Str());
-			material.set("roughness", ei::Vec4(1.0f, 0.0f, 0.0f, 0.0f));
+			material.set("roughness", 1.0f);
 		} else {
 			float shininess = 1.0f;
 			mat->Get( AI_MATKEY_SHININESS, shininess );
-			material.set("reflectivity", ei::Vec4(shininess, 0.0f, 0.0f, 0.0f));
-			material.set("roughness", ei::Vec4(1.0f / (shininess * shininess), 0.0f, 0.0f, 0.0f));
+			material.set("reflectivity", shininess);
+			material.set("roughness", 1.0f / (shininess * shininess));
 		}
 
 		// Load opacity
@@ -179,9 +189,9 @@ void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
 		{
 			material.setTexture("opacity", aiTmpStr.C_Str());
 		} else {
-			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
-			mat->Get( AI_MATKEY_OPACITY, color );
-			material.set("opacity", ei::Vec4(color.r, color.g, color.b, 0.0f));
+			float opacity = 1.0f;
+			mat->Get( AI_MATKEY_OPACITY, opacity );
+			material.set("opacity", opacity);
 		}
 
 		// Load emissivity
@@ -191,7 +201,7 @@ void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
 		} else {
 			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
 			mat->Get( AI_MATKEY_COLOR_EMISSIVE, color );
-			material.set("emissivity", ei::Vec4(color.r, color.g, color.b, 0.0f));
+			material.set("emissivity", ei::Vec3(color.r, color.g, color.b));
 		}
 
 		_bim.addMaterial(material);

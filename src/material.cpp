@@ -25,7 +25,7 @@ namespace bim {
 	{
 		auto it = m_values.find(_name);
 		if(it != m_values.end())
-			return *reinterpret_cast<const float*>(&it->second);
+			return *reinterpret_cast<const float*>(&it->second.values);
 		return _default;
 	}
 
@@ -33,7 +33,7 @@ namespace bim {
 	{
 		auto it = m_values.find(_name);
 		if(it != m_values.end())
-			return *reinterpret_cast<const ei::Vec2*>(&it->second);
+			return *reinterpret_cast<const ei::Vec2*>(&it->second.values);
 		return _default;
 	}
 
@@ -41,7 +41,7 @@ namespace bim {
 	{
 		auto it = m_values.find(_name);
 		if(it != m_values.end())
-			return *reinterpret_cast<const ei::Vec3*>(&it->second);
+			return *reinterpret_cast<const ei::Vec3*>(&it->second.values);
 		return _default;
 	}
 
@@ -49,28 +49,28 @@ namespace bim {
 	{
 		auto it = m_values.find(_name);
 		if(it != m_values.end())
-			return it->second;
+			return it->second.values;
 		return _default;
 	}
 
 	void Material::set(const std::string & _name, const float _value)
 	{
-		m_values[_name] = ei::Vec4(_value, 0.0f, 0.0f, 0.0f);
+		m_values[_name] = MultiValue{ei::Vec4(_value, 0.0f, 0.0f, 0.0f), 1};
 	}
 
 	void Material::set(const std::string & _name, const ei::Vec2 & _value)
 	{
-		m_values[_name] = ei::Vec4(_value, 0.0f, 0.0f);
+		m_values[_name] = MultiValue{ei::Vec4(_value, 0.0f, 0.0f), 2};
 	}
 
 	void Material::set(const std::string & _name, const ei::Vec3 & _value)
 	{
-		m_values[_name] = ei::Vec4(_value, 0.0f);
+		m_values[_name] = MultiValue{ei::Vec4(_value, 0.0f), 3};
 	}
 
 	void Material::set(const std::string & _name, const ei::Vec4 & _value)
 	{
-		m_values[_name] = _value;
+		m_values[_name] = MultiValue{_value, 4};
 	}
 	
 	void Material::setTexture(const std::string& _name, std::string _textureFile)

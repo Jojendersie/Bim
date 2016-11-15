@@ -577,6 +577,96 @@ namespace bim {
 			json.endObject();
 		}
 		json.endObject();
+
+		json.valuePreamble("lights");
+		json.beginObject();
+		for(auto& light : m_lights)
+		{
+			json.valuePreamble(light->name.c_str());
+			json.beginObject();
+			json.valuePreamble("type");
+			switch(light->type)
+			{
+			case Light::Type::POINT: {
+				json.value("point");
+				PointLight* l = dynamic_cast<PointLight*>(light.get());
+				json.valuePreamble("position");
+				json.value((float*)&l->position, 3);
+				json.valuePreamble("intensity");
+				json.value((float*)&l->intensity, 3);
+			} break;
+			case Light::Type::LAMBERT: {
+				json.value("lambert");
+				LambertLight* l = dynamic_cast<LambertLight*>(light.get());
+				json.valuePreamble("position");
+				json.value((float*)&l->position, 3);
+				json.valuePreamble("intensity");
+				json.value((float*)&l->intensity, 3);
+				json.valuePreamble("normal");
+				json.value((float*)&l->normal, 3);
+			} break;
+			case Light::Type::DIRECTIONAL: {
+				json.value("directional");
+				DirectionalLight* l = dynamic_cast<DirectionalLight*>(light.get());
+				json.valuePreamble("direction");
+				json.value((float*)&l->direction, 3);
+				json.valuePreamble("irradiance");
+				json.value((float*)&l->irradiance, 3);
+			} break;
+			case Light::Type::SPOT: {
+				json.value("spot");
+				SpotLight* l = dynamic_cast<SpotLight*>(light.get());
+				json.valuePreamble("position");
+				json.value((float*)&l->position, 3);
+				json.valuePreamble("direction");
+				json.value((float*)&l->direction, 3);
+				json.valuePreamble("peakIntensity");
+				json.value((float*)&l->peakIntensity, 3);
+				json.valuePreamble("falloff");
+				json.value(&l->falloff, 1);
+				json.valuePreamble("halfAngle");
+				json.value(&l->halfAngle, 1);
+			} break;
+			case Light::Type::SKY: {
+				json.value("sky");
+				SkyLight* l = dynamic_cast<SkyLight*>(light.get());
+				json.valuePreamble("sunDirection");
+				json.value((float*)&l->sunDirection, 3);
+				json.valuePreamble("turbidity");
+				json.value(&l->turbidity, 1);
+				json.valuePreamble("aerialPerspective");
+				json.value(&l->aerialPerspective, 1);
+			} break;
+			case Light::Type::GONIOMETRIC: {
+				json.value("goniometric");
+				GoniometricLight* l = dynamic_cast<GoniometricLight*>(light.get());
+				json.valuePreamble("intensityMap");
+				json.value(l->intensityMap.c_str());
+				json.valuePreamble("intensityScale");
+				json.value((float*)&l->intensityScale, 3);
+				json.valuePreamble("position");
+				json.value((float*)&l->position, 3);
+			} break;
+			case Light::Type::ENVIRONMENT: {
+				json.value("envmap");
+				EnvironmentLight* l = dynamic_cast<EnvironmentLight*>(light.get());
+				json.valuePreamble("radianceMap");
+				json.value(l->radianceMap.c_str());
+			} break;
+			}
+			// Find all scenarios which reference this light
+			json.valuePreamble("scenario");
+			std::vector<const char*> scenarioNames;
+			for(auto & sc : m_scenarios)
+			{
+				if(sc.hasLight(light))
+					scenarioNames.push_back(sc.getName().c_str());
+			}
+			json.value(scenarioNames.data(), (int)scenarioNames.size());
+			json.endObject();
+		}
+		json.endObject();
+
 		json.endObject();
 	}
 }

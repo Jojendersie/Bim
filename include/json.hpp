@@ -69,7 +69,9 @@ public:
 	void endObject();
 	void valuePreamble(const char* _valueName);
 	void value(const char* _string);
+	void value(const char** _stringArray, int _num);
 	void value(float* _floatArray, int _num);
+	void value(bool* _boolArray, int _num);
 private:
 	FILE* m_outFile;
 	int m_idention;
@@ -257,6 +259,19 @@ inline void JsonWriter::value(const char* _string)
 	m_lastMode = Mode::ENDLINE;
 }
 
+inline void JsonWriter::value(const char** _stringArray, int _num)
+{
+	if(_num == 1)
+		fprintf(m_outFile, "\"%s\"", _stringArray[0]);
+	else {
+		fprintf(m_outFile, "[");
+		for(int i = 0; i < _num; ++i)
+			fprintf(m_outFile, "\"%s\"%s", _stringArray[i], (i==_num-1) ? "]" : ", ");
+	}
+	m_lastMode = Mode::ENDLINE;
+}
+
+
 inline void JsonWriter::value(float* _floatArray, int _num)
 {
 	if(_num == 1)
@@ -265,6 +280,18 @@ inline void JsonWriter::value(float* _floatArray, int _num)
 		fprintf(m_outFile, "[");
 		for(int i = 0; i < _num; ++i)
 			fprintf(m_outFile, "%g%s", _floatArray[i], (i==_num-1) ? "]" : ", ");
+	}
+	m_lastMode = Mode::ENDLINE;
+}
+
+inline void JsonWriter::value(bool* _boolArray, int _num)
+{
+	if(_num == 1)
+		fprintf(m_outFile, _boolArray[0] ? "true" : "false");
+	else {
+		fprintf(m_outFile, "[");
+		for(int i = 0; i < _num; ++i)
+			fprintf(m_outFile, "%s%s", _boolArray[i] ? "true" : "false", (i==_num-1) ? "]" : ", ");
 	}
 	m_lastMode = Mode::ENDLINE;
 }

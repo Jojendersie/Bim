@@ -18,6 +18,12 @@ namespace bim {
 
 		std::shared_ptr<Light> getLight(uint _index) const { return m_lights[_index]; }
 		uint getNumLights() const { return (uint)m_lights.size(); }
+		bool hasLight(const std::shared_ptr<Light>& _light)
+		{
+			for(auto & l : m_lights)
+				if(l == _light) return true;
+			return false;
+		}
 
 		/// Add the reference to a light. The light must be referenced in the
 		/// scene too.

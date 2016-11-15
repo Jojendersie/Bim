@@ -200,7 +200,7 @@ Light types are:
 
 `sky`:
 
-    sunDir         Direction of the sun (y is up)
+    sunDirection   Direction of the sun (y is up)
     turbidity      A value greater 1 (usually in [2,10]). The larger the value the more
                    scattering is introduced.
     aerialPerspective true/false Enable depth dependent fog (atmospherical scattering).
@@ -208,11 +208,12 @@ Light types are:
 `goniometric`:
 
     intensityMap    A single .dds or .ktx texture containing a cube map (HDR: [cd = lm/sr]).
+	intensityScale	Unitless scaling factor which is multiplied with the value of the map.
     position
 
 `envmap`
 
-    cubeMap         A single .dds or .ktx texture containing a cube map (HDR: [cd/m^2]).
+    radianceMap         A single .dds or .ktx texture containing a cube map (HDR: [cd/m^2]).
 
 ## File Structure ##
 The binary file is stored in a classical chunk pattern (not to confuse with the scene chunks). A file-chunk starts with a header (4 byte type, 8 byte size value) followed by its data of the length given in the header's size value. A loaded may ignore entire chunks by simply skipping them.

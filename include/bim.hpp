@@ -2,6 +2,7 @@
 
 #include "chunk.hpp"
 #include "material.hpp"
+#include "scenario.hpp"
 #include <fstream>
 #include <ei/3dtypes.hpp>
 
@@ -83,6 +84,19 @@ namespace bim {
 		/// Set one of AABOX_BVH, OBOX_BVH or SPHERE_BVH as the accelerator to be used.
 		/// If the property does not exist this command will do nothing.
 		void setAccelerator(Property::Val _accelerator) { if(m_chunks[0].m_properties & _accelerator) m_accelerator = _accelerator; }
+
+		uint getNumScenarios() const { return (uint)m_scenarios.size(); }
+		/// Scenarios can be accessed by index or by name (by index is faster)
+		Scenario* getScenario(uint _index);
+		Scenario* getScenario(const std::string& _name);
+		/// Create a new scenario and obtain its reference
+		Scenario* addScenario(const std::string& _name);
+
+		uint getNumLights() const { return (uint)m_lights.size(); }
+		/// Lights can be accessed by index or by name (by index is faster)
+		std::shared_ptr<Light> getLight(uint _index);
+		std::shared_ptr<Light> getLight(const std::string& _name);
+		void addLight(std::shared_ptr<Light> _light);
 	private:
 		std::string loadEnv(const char* _envFile, bool _ignoreBinary);
 		void loadMaterial(Json & json, const JsonValue & _matNode);
@@ -101,6 +115,8 @@ namespace bim {
 		std::vector<Chunk> m_chunks;
 		std::vector<Material> m_materials;
 		std::vector<uint> m_materialIndirection;
+		std::vector<std::shared_ptr<Light>> m_lights;
+		std::vector<Scenario> m_scenarios;
 		Property::Val m_requestedProps;	///< All properties for which the getter should succeed.
 		Property::Val m_optionalProperties;
 		Property::Val m_accelerator;	///< Chosen kind of acceleration structure (specified by environment file)

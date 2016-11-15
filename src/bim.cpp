@@ -47,4 +47,57 @@ namespace bim {
 	{
 	}
 
+	Scenario * BinaryModel::getScenario(uint _index)
+	{
+		if(m_scenarios.size() > _index)
+			return &m_scenarios[_index];
+		else return nullptr;
+	}
+
+	Scenario * BinaryModel::getScenario(const std::string & _name)
+	{
+		// Linear search for the scenario
+		for(auto & e : m_scenarios)
+			if(e.getName() == _name) return &e;
+		return nullptr;
+	}
+
+	Scenario * BinaryModel::addScenario(const std::string & _name)
+	{
+#ifdef DEBUG
+		if(getScenario(_name)) {
+			std::cerr << "There is already a scenario with the same name!\n";
+			return nullptr;
+		}
+#endif
+		m_scenarios.push_back(Scenario(_name));
+		return &m_scenarios.back();
+	}
+
+	std::shared_ptr<Light> BinaryModel::getLight(uint _index)
+	{
+		if(m_lights.size() > _index)
+			return m_lights[_index];
+		else return nullptr;
+	}
+
+	std::shared_ptr<Light> BinaryModel::getLight(const std::string & _name)
+	{
+		// Linear search for the light
+		for(auto l : m_lights)
+			if(l->name == _name) return l;
+		return nullptr;
+	}
+
+	void BinaryModel::addLight(std::shared_ptr<Light> _light)
+	{
+#ifdef DEBUG
+		if(getLight(_name)) {
+			std::cerr << "There is already a light with the same name!\n";
+			return nullptr;
+		}
+#endif
+		m_lights.push_back(_light);
+	}
+
 } // namespace bim

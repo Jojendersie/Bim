@@ -31,7 +31,8 @@ An example for a JSON file looks as follows:
                 "scenario": ["stresstest"],
                 "position": [1.0, 2.0, 3.0],
                 "fov": 67.0,
-                "lookAt": [0.0, 0.0, 0.0]
+                "lookAt": [0.0, 0.0, 0.0],
+				"velocity": 2.5, // Factor for interactive movements
             },
             <camname>: {
 				"type": "orthographic",
@@ -206,12 +207,12 @@ Light types are:
 
 `goniometric`:
 
-    intensityMap    Spherical HDR map (octahedral, or elliptical?)
+    intensityMap    A single .dds or .ktx texture containing a cube map (HDR: [cd = lm/sr]).
     position
 
 `envmap`
 
-    cubeMap         Array of 6 texture names
+    cubeMap         A single .dds or .ktx texture containing a cube map (HDR: [cd/m^2]).
 
 ## File Structure ##
 The binary file is stored in a classical chunk pattern (not to confuse with the scene chunks). A file-chunk starts with a header (4 byte type, 8 byte size value) followed by its data of the length given in the header's size value. A loaded may ignore entire chunks by simply skipping them.

@@ -194,7 +194,7 @@ Light types are:
 
     position
     direction
-    peakIntensity
+    peakIntensity or intensity [cd = lm / sr]
     falloff
     halfAngle
 

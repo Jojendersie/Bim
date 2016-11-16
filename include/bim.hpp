@@ -100,6 +100,7 @@ namespace bim {
 	private:
 		std::string loadEnv(const char* _envFile, bool _ignoreBinary);
 		void loadMaterial(Json & json, const JsonValue & _matNode);
+		void loadLight(Json & json, const JsonValue & _lightNode);
 
 		enum class ChunkState {
 			LOADED,

@@ -471,6 +471,11 @@ namespace bim {
 				if(strcmp(lvl1Node.getString(), "aabox") == 0) m_accelerator = Property::AABOX_BVH;
 				else if(strcmp(lvl1Node.getString(), "obox") == 0) m_accelerator = Property::OBOX_BVH;
 				else std::cerr << "Unknown accelerator in environment file. Only 'aabox' and 'obox' are valid.\n";
+			} else if(strcmp(lvl1Node.getName(), "lights") == 0) {
+				JsonValue lightNode;
+				if(json.child(lvl1Node, lightNode))
+					do { loadLight(json, lightNode); }
+					while(json.next(lightNode, lightNode));
 			}
 		} while(json.next(lvl1Node, lvl1Node));
 
@@ -497,8 +502,8 @@ namespace bim {
 					JsonValue v; json.child(matProp, v);
 					value.values[0] = v.getFloat();
 					if(json.next(v, v)) {value.values[1] = v.getFloat(); value.numComponents = 2;}
-					if(json.next(v, v)) {value.values[2] = v.getFloat(); value.numComponents = 2;}
-					if(json.next(v, v)) {value.values[3] = v.getFloat(); value.numComponents = 2;}
+					if(json.next(v, v)) {value.values[2] = v.getFloat(); value.numComponents = 3;}
+					if(json.next(v, v)) {value.values[3] = v.getFloat(); value.numComponents = 4;}
 					mat.m_values.emplace(matProp.getName(), value);
 				} else if(matProp.getType() == JsonValue::Type::FLOAT)
 					mat.m_values.emplace(matProp.getName(), Material::MultiValue{ei::Vec4(matProp.getFloat(), 0.0f, 0.0f, 0.0f), 1});
@@ -506,6 +511,100 @@ namespace bim {
 					mat.m_values.emplace(matProp.getName(), Material::MultiValue{ei::Vec4((float)matProp.getInt(), 0.0f, 0.0f, 0.0f), 1});
 			} while(json.next(matProp, matProp));
 		m_materials.push_back(mat);
+	}
+
+	static ei::Vec3 readVec3(Json & json, const JsonValue & _lightProp)
+	{
+		ei::Vec3 value(0.0f);
+		JsonValue v;
+		if(json.child(_lightProp, v)) value.x = v.getFloat();
+		if(json.next(v, v)) value.y = v.getFloat();
+		if(json.next(v, v)) value.z = v.getFloat();
+		return value;
+	}
+
+	void BinaryModel::loadLight(Json & json, const JsonValue & _lightNode)
+	{
+		// Default values for all possible light properties (some are not
+		// used dependent on the final type).
+		Light::Type type = Light::Type(555);
+		ei::Vec3 position(0.0f);
+		ei::Vec3 intensity(10000.0f); // Also used as radiance or intensity scale
+		ei::Vec3 normal(0.0f, 1.0f, 0.0f); // Also used as light direction
+		float falloff = 0.1f;
+		float halfAngle = 0.7f;
+		float turbidity = 2.0f;
+		bool aerialPerspective = false;
+		std::string map;
+		std::vector<const char*> scenarios;
+
+		JsonValue lightProp;
+		if(json.child(_lightNode, lightProp))
+		{
+			if(strcmp(lightProp.getName(), "position") == 0) position = readVec3(json, lightProp);
+			else if(strcmp(lightProp.getName(), "intensity") == 0) intensity = readVec3(json, lightProp);
+			else if(strcmp(lightProp.getName(), "normal") == 0) normal = readVec3(json, lightProp);
+			else if(strcmp(lightProp.getName(), "direction") == 0) normal = readVec3(json, lightProp);
+			else if(strcmp(lightProp.getName(), "irradiance") == 0) intensity = readVec3(json, lightProp);
+			else if(strcmp(lightProp.getName(), "peakIntensity") == 0) intensity = readVec3(json, lightProp);
+			else if(strcmp(lightProp.getName(), "falloff") == 0) falloff = lightProp.getFloat();
+			else if(strcmp(lightProp.getName(), "halfAngle") == 0) halfAngle = lightProp.getFloat();
+			else if(strcmp(lightProp.getName(), "sunDirection") == 0) normal = readVec3(json, lightProp);
+			else if(strcmp(lightProp.getName(), "turbidity") == 0) turbidity = lightProp.getFloat();
+			else if(strcmp(lightProp.getName(), "aerialPerspective") == 0) aerialPerspective = lightProp.getBool();
+			else if(strcmp(lightProp.getName(), "intensityMap") == 0) map = lightProp.getString();
+			else if(strcmp(lightProp.getName(), "intensityScale") == 0) intensity = readVec3(json, lightProp);
+			else if(strcmp(lightProp.getName(), "radianceMap") == 0) map = lightProp.getString();
+			else if(strcmp(lightProp.getName(), "scenario") == 0) 
+			{
+				if(lightProp.getType() == JsonValue::Type::ARRAY)
+				{
+					JsonValue v;
+					json.child(lightProp, v);
+					do {
+						scenarios.push_back(v.getString());
+					} while(json.next(v, v));
+				} else {
+					std::cerr << "Error while loading light " << _lightNode.getName() << ": scenarios must be an array of strings!\n";
+				}
+			}
+		}
+
+		switch(type)
+		{
+		case Light::Type::POINT:
+			m_lights.push_back(std::make_shared<PointLight>(position, intensity, _lightNode.getName()));
+			break;
+		case Light::Type::LAMBERT:
+			m_lights.push_back(std::make_shared<LambertLight>(position, normal, intensity, _lightNode.getName()));
+			break;
+		case Light::Type::DIRECTIONAL:
+			m_lights.push_back(std::make_shared<DirectionalLight>(normal, intensity, _lightNode.getName()));
+			break;
+		case Light::Type::SPOT:
+			m_lights.push_back(std::make_shared<SpotLight>(position, normal, intensity, falloff, halfAngle, _lightNode.getName()));
+			break;
+		case Light::Type::SKY:
+			m_lights.push_back(std::make_shared<SkyLight>(normal, turbidity, aerialPerspective, _lightNode.getName()));
+			break;
+		case Light::Type::GONIOMETRIC:
+			m_lights.push_back(std::make_shared<GoniometricLight>(position, intensity, map, _lightNode.getName()));
+			break;
+		case Light::Type::ENVIRONMENT:
+			m_lights.push_back(std::make_shared<EnvironmentLight>(map, _lightNode.getName()));
+			break;
+		default:
+			std::cerr << "Light " << _lightNode.getName() << " does not have a type!\n";
+			return;
+		}
+
+		for(auto sname : scenarios)
+		{
+			Scenario* scenario = getScenario(sname);
+			if(!scenario)
+				scenario = addScenario(sname);
+			scenario->addLight(m_lights.back());
+		}
 	}
 
 	// Extract the relative path of _file with respect to base

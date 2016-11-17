@@ -150,6 +150,7 @@ inline bool Json::readProperty(JsonValue& _next)
 {
 	// Read "name": ...
 	if(!readToken()) return false;
+	if(m_tokenPos[0] == '}') return false; // End of object -> there is no further property
 	if(m_tokenPos[0] != '"') return readValue(_next); // Expect to be inside an array.
 	if(!readToken()) return false;
 	if((m_readPos[0] != '"') && (m_readPos[0] != '\0')) return false; // syntax error

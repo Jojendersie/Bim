@@ -541,33 +541,35 @@ namespace bim {
 		JsonValue lightProp;
 		if(json.child(_lightNode, lightProp))
 		{
-			if(strcmp(lightProp.getName(), "position") == 0) position = readVec3(json, lightProp);
-			else if(strcmp(lightProp.getName(), "intensity") == 0) intensity = readVec3(json, lightProp);
-			else if(strcmp(lightProp.getName(), "normal") == 0) normal = readVec3(json, lightProp);
-			else if(strcmp(lightProp.getName(), "direction") == 0) normal = readVec3(json, lightProp);
-			else if(strcmp(lightProp.getName(), "irradiance") == 0) intensity = readVec3(json, lightProp);
-			else if(strcmp(lightProp.getName(), "peakIntensity") == 0) intensity = readVec3(json, lightProp);
-			else if(strcmp(lightProp.getName(), "falloff") == 0) falloff = lightProp.getFloat();
-			else if(strcmp(lightProp.getName(), "halfAngle") == 0) halfAngle = lightProp.getFloat();
-			else if(strcmp(lightProp.getName(), "sunDirection") == 0) normal = readVec3(json, lightProp);
-			else if(strcmp(lightProp.getName(), "turbidity") == 0) turbidity = lightProp.getFloat();
-			else if(strcmp(lightProp.getName(), "aerialPerspective") == 0) aerialPerspective = lightProp.getBool();
-			else if(strcmp(lightProp.getName(), "intensityMap") == 0) map = lightProp.getString();
-			else if(strcmp(lightProp.getName(), "intensityScale") == 0) intensity = readVec3(json, lightProp);
-			else if(strcmp(lightProp.getName(), "radianceMap") == 0) map = lightProp.getString();
-			else if(strcmp(lightProp.getName(), "scenario") == 0) 
-			{
-				if(lightProp.getType() == JsonValue::Type::ARRAY)
+			do {
+				if(strcmp(lightProp.getName(), "position") == 0) position = readVec3(json, lightProp);
+				else if(strcmp(lightProp.getName(), "intensity") == 0) intensity = readVec3(json, lightProp);
+				else if(strcmp(lightProp.getName(), "normal") == 0) normal = readVec3(json, lightProp);
+				else if(strcmp(lightProp.getName(), "direction") == 0) normal = readVec3(json, lightProp);
+				else if(strcmp(lightProp.getName(), "irradiance") == 0) intensity = readVec3(json, lightProp);
+				else if(strcmp(lightProp.getName(), "peakIntensity") == 0) intensity = readVec3(json, lightProp);
+				else if(strcmp(lightProp.getName(), "falloff") == 0) falloff = lightProp.getFloat();
+				else if(strcmp(lightProp.getName(), "halfAngle") == 0) halfAngle = lightProp.getFloat();
+				else if(strcmp(lightProp.getName(), "sunDirection") == 0) normal = readVec3(json, lightProp);
+				else if(strcmp(lightProp.getName(), "turbidity") == 0) turbidity = lightProp.getFloat();
+				else if(strcmp(lightProp.getName(), "aerialPerspective") == 0) aerialPerspective = lightProp.getBool();
+				else if(strcmp(lightProp.getName(), "intensityMap") == 0) map = lightProp.getString();
+				else if(strcmp(lightProp.getName(), "intensityScale") == 0) intensity = readVec3(json, lightProp);
+				else if(strcmp(lightProp.getName(), "radianceMap") == 0) map = lightProp.getString();
+				else if(strcmp(lightProp.getName(), "scenario") == 0) 
 				{
-					JsonValue v;
-					json.child(lightProp, v);
-					do {
-						scenarios.push_back(v.getString());
-					} while(json.next(v, v));
-				} else {
-					std::cerr << "Error while loading light " << _lightNode.getName() << ": scenarios must be an array of strings!\n";
+					if(lightProp.getType() == JsonValue::Type::ARRAY)
+					{
+						JsonValue v;
+						json.child(lightProp, v);
+						do {
+							scenarios.push_back(v.getString());
+						} while(json.next(v, v));
+					} else {
+						std::cerr << "Error while loading light " << _lightNode.getName() << ": scenarios must be an array of strings!\n";
+					}
 				}
-			}
+			} while(json.next(lightProp, lightProp));
 		}
 
 		switch(type)

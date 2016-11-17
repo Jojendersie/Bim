@@ -723,18 +723,18 @@ namespace bim {
 				json.valuePreamble("peakIntensity");
 				json.value((float*)&l->peakIntensity, 3);
 				json.valuePreamble("falloff");
-				json.value(&l->falloff, 1);
+				json.value(l->falloff);
 				json.valuePreamble("halfAngle");
-				json.value(&l->halfAngle, 1);
+				json.value(l->halfAngle);
 			} break;
 			case Light::Type::SKY: {
 				SkyLight* l = dynamic_cast<SkyLight*>(light.get());
 				json.valuePreamble("sunDirection");
 				json.value((float*)&l->sunDirection, 3);
 				json.valuePreamble("turbidity");
-				json.value(&l->turbidity, 1);
+				json.value(l->turbidity);
 				json.valuePreamble("aerialPerspective");
-				json.value(&l->aerialPerspective, 1);
+				json.value(l->aerialPerspective);
 			} break;
 			case Light::Type::GONIOMETRIC: {
 				GoniometricLight* l = dynamic_cast<GoniometricLight*>(light.get());

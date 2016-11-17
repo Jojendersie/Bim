@@ -1,6 +1,7 @@
 #include "bim.hpp"
 #include "json.hpp"
 #include "../deps/miniz.c"
+#include "../deps/EnumConverter.h"
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -542,7 +543,8 @@ namespace bim {
 		if(json.child(_lightNode, lightProp))
 		{
 			do {
-				if(strcmp(lightProp.getName(), "position") == 0) position = readVec3(json, lightProp);
+				if(strcmp(lightProp.getName(), "type") == 0) type = Light::TypeFromString(lightProp.getString());
+				else if(strcmp(lightProp.getName(), "position") == 0) position = readVec3(json, lightProp);
 				else if(strcmp(lightProp.getName(), "intensity") == 0) intensity = readVec3(json, lightProp);
 				else if(strcmp(lightProp.getName(), "normal") == 0) normal = readVec3(json, lightProp);
 				else if(strcmp(lightProp.getName(), "direction") == 0) normal = readVec3(json, lightProp);
@@ -686,10 +688,10 @@ namespace bim {
 			json.valuePreamble(light->name.c_str());
 			json.beginObject();
 			json.valuePreamble("type");
+			json.value(Light::TypeToString(light->type).c_str());
 			switch(light->type)
 			{
 			case Light::Type::POINT: {
-				json.value("point");
 				PointLight* l = dynamic_cast<PointLight*>(light.get());
 				json.valuePreamble("position");
 				json.value((float*)&l->position, 3);
@@ -697,7 +699,6 @@ namespace bim {
 				json.value((float*)&l->intensity, 3);
 			} break;
 			case Light::Type::LAMBERT: {
-				json.value("lambert");
 				LambertLight* l = dynamic_cast<LambertLight*>(light.get());
 				json.valuePreamble("position");
 				json.value((float*)&l->position, 3);
@@ -707,7 +708,6 @@ namespace bim {
 				json.value((float*)&l->normal, 3);
 			} break;
 			case Light::Type::DIRECTIONAL: {
-				json.value("directional");
 				DirectionalLight* l = dynamic_cast<DirectionalLight*>(light.get());
 				json.valuePreamble("direction");
 				json.value((float*)&l->direction, 3);
@@ -715,7 +715,6 @@ namespace bim {
 				json.value((float*)&l->irradiance, 3);
 			} break;
 			case Light::Type::SPOT: {
-				json.value("spot");
 				SpotLight* l = dynamic_cast<SpotLight*>(light.get());
 				json.valuePreamble("position");
 				json.value((float*)&l->position, 3);
@@ -729,7 +728,6 @@ namespace bim {
 				json.value(&l->halfAngle, 1);
 			} break;
 			case Light::Type::SKY: {
-				json.value("sky");
 				SkyLight* l = dynamic_cast<SkyLight*>(light.get());
 				json.valuePreamble("sunDirection");
 				json.value((float*)&l->sunDirection, 3);
@@ -739,7 +737,6 @@ namespace bim {
 				json.value(&l->aerialPerspective, 1);
 			} break;
 			case Light::Type::GONIOMETRIC: {
-				json.value("goniometric");
 				GoniometricLight* l = dynamic_cast<GoniometricLight*>(light.get());
 				json.valuePreamble("intensityMap");
 				json.value(l->intensityMap.c_str());
@@ -749,7 +746,6 @@ namespace bim {
 				json.value((float*)&l->position, 3);
 			} break;
 			case Light::Type::ENVIRONMENT: {
-				json.value("envmap");
 				EnvironmentLight* l = dynamic_cast<EnvironmentLight*>(light.get());
 				json.valuePreamble("radianceMap");
 				json.value(l->radianceMap.c_str());

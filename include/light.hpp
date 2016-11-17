@@ -2,6 +2,7 @@
 
 #include <ei/vector.hpp>
 #include <string>
+#include "../deps/EnumConverter.h"
 
 namespace bim {
 
@@ -15,8 +16,11 @@ namespace bim {
 			SPOT,
 			SKY,
 			GONIOMETRIC,
-			ENVIRONMENT
+			ENVIRONMENT,
+
+			NUM
 		};
+		ENUM_CONVERT_FUNC(Type)
 
 		Light(Type _type, const char* _name = nullptr) :
 			type(_type)

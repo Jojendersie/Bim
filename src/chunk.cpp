@@ -213,11 +213,13 @@ namespace bim {
 				m_triangles[i-numInvalidTriangles].x = indexToIndex[m_triangles[i].x];
 				m_triangles[i-numInvalidTriangles].y = indexToIndex[m_triangles[i].y];
 				m_triangles[i-numInvalidTriangles].z = indexToIndex[m_triangles[i].z];
-				m_triangleMaterials[i-numInvalidTriangles] = m_triangleMaterials[i];
+				if(!m_triangleMaterials.empty())
+					m_triangleMaterials[i-numInvalidTriangles] = m_triangleMaterials[i];
 			}
 		}
 		m_triangles.resize(m_triangles.size() - numInvalidTriangles);
-		m_triangleMaterials.resize(m_triangleMaterials.size() - numInvalidTriangles);
+		if(!m_triangleMaterials.empty())
+			m_triangleMaterials.resize(m_triangleMaterials.size() - numInvalidTriangles);
 		std::cerr << "INF: found " << numInvalidTriangles << " invalid triangles after removing redundant vertices.\n";
 	}
 

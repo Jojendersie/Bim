@@ -152,6 +152,9 @@ namespace bim {
 		///		which should be computed. NORMAL, TANGENT, BITANGENT and QORMAL are
 		///		valid.
 		void computeTangentSpace(Property::Val _components);
+		/// Change the sign of the normal if winding order is different than expected.
+		/// This does not change the winding order itself. NORMAL and QORMAL are modified.
+		void flipNormals();
 
 		enum class BuildMethod
 		{

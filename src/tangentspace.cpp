@@ -86,16 +86,16 @@ namespace bim {
 
 		// Orthonormalize
 		if(useTexCoords)
-			for(size_t i = 0; i < m_positions.size(); ++i)
+			for(size_t i = 0; i < m_normals.size(); ++i)
 				ei::orthonormalize(m_normals[i], m_tangents[i], m_bitangents[i]);
 		else if(computeNormal)
-			for(size_t i = 0; i < m_positions.size(); ++i)
+			for(size_t i = 0; i < m_normals.size(); ++i)
 				m_normals[i] = normalize(m_normals[i]);
 
 		// Generate some "random" tangent spaces without the need of texture coordinates.
 		if(needsAll && !useTexCoords)
 		{
-			for(size_t i = 0; i < m_positions.size(); ++i)
+			for(size_t i = 0; i < m_normals.size(); ++i)
 			{
 				Mat3x3 m = ei::basis(m_normals[i]);
 				m_tangents[i] = ei::Vec3(m.m10, m.m11, m.m12);
@@ -105,7 +105,7 @@ namespace bim {
 
 		// Compute qormals by conversion
 		if(_components & Property::QORMAL)
-			for(size_t i = 0; i < m_positions.size(); ++i)
+			for(size_t i = 0; i < m_normals.size(); ++i)
 				m_qormals[i] = Quaternion(m_normals[i], m_tangents[i], m_bitangents[i]);
 
 		// Discard all the undesired properties for size reasons.
@@ -116,6 +116,14 @@ namespace bim {
 
 		// Update flags
 		m_properties = Property::Val(m_properties | _components);
+	}
+
+	void Chunk::flipNormals()
+	{
+		for(size_t i = 0; i < m_normals.size(); ++i)
+			m_normals[i] = -m_normals[i];
+
+		// TODO: flip Qormals too
 	}
 
 	void Chunk::unifyQormals()

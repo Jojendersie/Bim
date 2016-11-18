@@ -127,7 +127,7 @@ namespace bim {
 			epsilonSq = ei::min(epsilonSq, lensq(m_positions[m_triangles[i].z] - m_positions[m_triangles[i].x]));
 			epsilonSq = ei::min(epsilonSq, lensq(m_positions[m_triangles[i].z] - m_positions[m_triangles[i].y]));
 		}
-		epsilonSq *= 0.9f;
+		epsilonSq = ei::min(epsilonSq * 0.9f, lensq(m_boundingBox.max - m_boundingBox.min) * 1e-16f);
 
 		//std::unordered_map<FullVertex, uint> vertexToIndex;
 		HashGrid<3, FullVertex, uint32> vertexToIndex(m_boundingBox.min, m_boundingBox.max, ei::Vec3(sqrt(epsilonSq)));

@@ -528,7 +528,7 @@ namespace bim {
 	{
 		// Default values for all possible light properties (some are not
 		// used dependent on the final type).
-		Light::Type type = Light::Type(555);
+		Light::Type type = Light::Type::NUM_TYPES;
 		ei::Vec3 position(0.0f);
 		ei::Vec3 intensity(10000.0f); // Also used as radiance or intensity scale
 		ei::Vec3 normal(0.0f, 1.0f, 0.0f); // Also used as light direction
@@ -608,6 +608,74 @@ namespace bim {
 			if(!scenario)
 				scenario = addScenario(sname);
 			scenario->addLight(m_lights.back());
+		}
+	}
+
+	void BinaryModel::loadCamera(Json& json, const JsonValue& _camNode)
+	{
+		// Default values
+		Camera::Type type = Camera::Type::NUM_TYPES;
+		ei::Vec3 position(0.0f);
+		ei::Vec3 lookAt(0.0f, 0.0f, 1.0f);
+		ei::Vec3 up(0.0f, 1.0f, 0.0f);
+		float fieldOfView = 90.0f;
+		float left = -1.0f;
+		float right = 1.0f;
+		float bottom = -1.0f;
+		float top = 1.0f;
+		float near = 0.0f;
+		float far = 1e30f;
+		float focalLength = 20.0f;
+		float focusDistance = 1.0f;
+		float sensorSize = 24.0f;
+		float aperture = 1.0f;
+		const char* scenarioName = nullptr;
+
+		JsonValue camProp;
+		if(json.child(_camNode, camProp))
+		{
+			do {
+				if(strcmp(camProp.getName(), "type") == 0) type = Camera::TypeFromString(camProp.getString());
+				else if(strcmp(camProp.getName(), "position") == 0) position = readVec3(json, camProp);
+				else if(strcmp(camProp.getName(), "lookAt") == 0) lookAt = readVec3(json, camProp);
+				else if(strcmp(camProp.getName(), "up") == 0) up = readVec3(json, camProp);
+				else if(strcmp(camProp.getName(), "fov") == 0) fieldOfView = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "left") == 0) left = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "right") == 0) right = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "bottom") == 0) bottom = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "top") == 0) top = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "near") == 0) near = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "far") == 0) far = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "focalLength") == 0) focalLength = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "focusDistance") == 0) focusDistance = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "sensorSize") == 0) sensorSize = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "aperture") == 0) aperture = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "scenario") == 0) scenarioName = camProp.getString();
+			} while(json.next(camProp, camProp));
+		}
+
+		switch(type)
+		{
+		case Camera::Type::PERSPECTIVE:
+			m_cameras.push_back(std::make_shared<PerspectiveCamera>(position, lookAt, up, fieldOfView, _camNode.getName()));
+			break;
+		case Camera::Type::ORTHOGRAPHIC:
+			m_cameras.push_back(std::make_shared<OrthographicCamera>(position, lookAt, up, left, right, bottom, top, near, far, _camNode.getName()));
+			break;
+		case Camera::Type::FOCUS:
+			m_cameras.push_back(std::make_shared<FocusCamera>(position, lookAt, up, focalLength, focusDistance, sensorSize, aperture, _camNode.getName()));
+			break;
+		default:
+			std::cerr << "Camera " << _camNode.getName() << " does not have a type!\n";
+			return;
+		}
+
+		if(scenarioName)
+		{
+			Scenario* scenario = getScenario(scenarioName);
+			if(!scenario)
+				scenario = addScenario(scenarioName);
+			scenario->setCamera(m_cameras.back());
 		}
 	}
 
@@ -694,34 +762,34 @@ namespace bim {
 			case Light::Type::POINT: {
 				PointLight* l = dynamic_cast<PointLight*>(light.get());
 				json.valuePreamble("position");
-				json.value((float*)&l->position, 3);
+				json.value(reinterpret_cast<float*>(&l->position), 3);
 				json.valuePreamble("intensity");
-				json.value((float*)&l->intensity, 3);
+				json.value(reinterpret_cast<float*>(&l->intensity), 3);
 			} break;
 			case Light::Type::LAMBERT: {
 				LambertLight* l = dynamic_cast<LambertLight*>(light.get());
 				json.valuePreamble("position");
-				json.value((float*)&l->position, 3);
+				json.value(reinterpret_cast<float*>(&l->position), 3);
 				json.valuePreamble("intensity");
-				json.value((float*)&l->intensity, 3);
+				json.value(reinterpret_cast<float*>(&l->intensity), 3);
 				json.valuePreamble("normal");
-				json.value((float*)&l->normal, 3);
+				json.value(reinterpret_cast<float*>(&l->normal), 3);
 			} break;
 			case Light::Type::DIRECTIONAL: {
 				DirectionalLight* l = dynamic_cast<DirectionalLight*>(light.get());
 				json.valuePreamble("direction");
-				json.value((float*)&l->direction, 3);
+				json.value(reinterpret_cast<float*>(&l->direction), 3);
 				json.valuePreamble("irradiance");
-				json.value((float*)&l->irradiance, 3);
+				json.value(reinterpret_cast<float*>(&l->irradiance), 3);
 			} break;
 			case Light::Type::SPOT: {
 				SpotLight* l = dynamic_cast<SpotLight*>(light.get());
 				json.valuePreamble("position");
-				json.value((float*)&l->position, 3);
+				json.value(reinterpret_cast<float*>(&l->position), 3);
 				json.valuePreamble("direction");
-				json.value((float*)&l->direction, 3);
+				json.value(reinterpret_cast<float*>(&l->direction), 3);
 				json.valuePreamble("peakIntensity");
-				json.value((float*)&l->peakIntensity, 3);
+				json.value(reinterpret_cast<float*>(&l->peakIntensity), 3);
 				json.valuePreamble("falloff");
 				json.value(l->falloff);
 				json.valuePreamble("halfAngle");
@@ -730,7 +798,7 @@ namespace bim {
 			case Light::Type::SKY: {
 				SkyLight* l = dynamic_cast<SkyLight*>(light.get());
 				json.valuePreamble("sunDirection");
-				json.value((float*)&l->sunDirection, 3);
+				json.value(reinterpret_cast<float*>(&l->sunDirection), 3);
 				json.valuePreamble("turbidity");
 				json.value(l->turbidity);
 				json.valuePreamble("aerialPerspective");
@@ -741,9 +809,9 @@ namespace bim {
 				json.valuePreamble("intensityMap");
 				json.value(l->intensityMap.c_str());
 				json.valuePreamble("intensityScale");
-				json.value((float*)&l->intensityScale, 3);
+				json.value(reinterpret_cast<float*>(&l->intensityScale), 3);
 				json.valuePreamble("position");
-				json.value((float*)&l->position, 3);
+				json.value(reinterpret_cast<float*>(&l->position), 3);
 			} break;
 			case Light::Type::ENVIRONMENT: {
 				EnvironmentLight* l = dynamic_cast<EnvironmentLight*>(light.get());
@@ -760,6 +828,70 @@ namespace bim {
 					scenarioNames.push_back(sc.getName().c_str());
 			}
 			json.value(scenarioNames.data(), (int)scenarioNames.size());
+			json.endObject();
+		}
+		json.endObject();
+
+		json.valuePreamble("cameras");
+		json.beginObject();
+		for(auto& cam : m_cameras)
+		{
+			json.valuePreamble(cam->name.c_str());
+			json.beginObject();
+			json.valuePreamble("type");
+			json.value(Camera::TypeToString(cam->type).c_str());
+			switch(cam->type)
+			{
+			case Camera::Type::PERSPECTIVE: {
+				PerspectiveCamera* c = dynamic_cast<PerspectiveCamera*>(cam.get());
+				json.valuePreamble("position");
+				json.value(reinterpret_cast<float*>(&c->position), 3);
+				json.valuePreamble("lookAt");
+				json.value(reinterpret_cast<float*>(&c->lookAt), 3);
+				json.valuePreamble("up");
+				json.value(reinterpret_cast<float*>(&c->up), 3);
+				json.valuePreamble("fov");
+				json.value(c->verticalFOV);
+			} break;
+			case Camera::Type::ORTHOGRAPHIC: {
+				OrthographicCamera* c = dynamic_cast<OrthographicCamera*>(cam.get());
+				json.valuePreamble("position");
+				json.value(reinterpret_cast<float*>(&c->position), 3);
+				json.valuePreamble("lookAt");
+				json.value(reinterpret_cast<float*>(&c->lookAt), 3);
+				json.valuePreamble("up");
+				json.value(reinterpret_cast<float*>(&c->up), 3);
+				json.valuePreamble("left");
+				json.value(c->left);
+				json.valuePreamble("right");
+				json.value(c->right);
+				json.valuePreamble("bottom");
+				json.value(c->bottom);
+				json.valuePreamble("top");
+				json.value(c->top);
+				json.valuePreamble("near");
+				json.value(c->near);
+				json.valuePreamble("far");
+				json.value(c->far);
+			} break;
+			case Camera::Type::FOCUS: {
+				FocusCamera* c = dynamic_cast<FocusCamera*>(cam.get());
+				json.valuePreamble("position");
+				json.value(reinterpret_cast<float*>(&c->position), 3);
+				json.valuePreamble("lookAt");
+				json.value(reinterpret_cast<float*>(&c->lookAt), 3);
+				json.valuePreamble("up");
+				json.value(reinterpret_cast<float*>(&c->up), 3);
+				json.valuePreamble("focalLength");
+				json.value(c->focalLength);
+				json.valuePreamble("focusDistance");
+				json.value(c->focusDistance);
+				json.valuePreamble("sensorSize");
+				json.value(c->sensorSize);
+				json.valuePreamble("aperture");
+				json.value(c->aperture);
+			} break;
+			}
 			json.endObject();
 		}
 		json.endObject();

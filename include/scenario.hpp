@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "light.hpp"
+#include "camera.hpp"
 
 namespace bim {
 
@@ -28,9 +29,14 @@ namespace bim {
 		/// Add the reference to a light. The light must be referenced in the
 		/// scene too.
 		void addLight(std::shared_ptr<Light> _light) { m_lights.push_back(move(_light)); }
+
+		void setCamera(std::shared_ptr<Camera> _camera) { m_camera = move(_camera); }
+		std::shared_ptr<Camera> getCamera() { return m_camera; }
+		std::shared_ptr<const Camera> getCamera() const { return m_camera; }
 	private:
 		std::string m_name;
 		// std::shared_ptr<Camera>
 		std::vector<std::shared_ptr<Light>> m_lights;
+		std::shared_ptr<Camera> m_camera;
 	};
 }

@@ -5,7 +5,8 @@
 // just function declarations: myEnumToString + myEnumFromString
 #define ENUM_CONVERT_FUNC(myEnum) \
 static std::string myEnum##ToString( myEnum s); \
-static myEnum myEnum##FromString(const std::string& s);
+static myEnum myEnum##FromString(const std::string& s); \
+static std::map< myEnum, std::string > s_##myEnum##Map;
 
 /* 
 	function definitions of myEnumToString + myEnumFromString
@@ -16,13 +17,13 @@ static myEnum myEnum##FromString(const std::string& s);
 	...: Pairs: {Color::Red,"red"},{Color::Blue,"blue"}
 */
 #define ENUM_CONVERT(scope, myEnum, notFound,...)	\
-static std::map< scope::myEnum ,std::string> s_##myEnum = {	\
+std::map< scope::myEnum, std::string > scope::s_##myEnum##Map = {	\
 		__VA_ARGS__	};						\
 std::string scope::myEnum##ToString( myEnum s){	\
-	auto it = s_##myEnum.find(s);			\
-	if(it != s_##myEnum.end()) return it->second;	\
+	auto it = s_##myEnum##Map.find(s);			\
+	if(it != s_##myEnum##Map.end()) return it->second;	\
 	return "";}								\
 scope::myEnum scope::myEnum##FromString(const std::string& s){	\
-	for(const auto& e : s_##myEnum){		\
+	for(const auto& e : s_##myEnum##Map){		\
 	if(e.second == s) return e.first;}		\
 	return scope::notFound;}

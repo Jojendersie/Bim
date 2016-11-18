@@ -89,6 +89,48 @@ The ray tracing structure which should be used. The binary file must contain
 the precomputed structure to be used. Then, valid choices are `aabox` (BVH) and `obox` (BVH).
 The default is `aabox`.
 
+### "cameras" ###
+A camera defines an (initial) view to the scene. Most of the cameras can be moved around interactively. The `velocity` [units/s] attribute can always be given and should be chosen dependent on the scene size. A value of 0 disables interaction (including the rotation).
+
+Like lights a camera can be used in one or multiple `scenario`s. On the other side, each scenario must have exactly one camera.
+
+The different camera `type`s are:
+
+`perspective`:
+
+    position      The position.                              {0, 0, 0}
+    lookAt        A position which is centered in the image. {0, 0, 1}
+    direction     Alternative to lookAt: a direction.        {0, 0, 1}
+                  Does not need to be normalized.
+    up            Up orientation of the camera (not y axis)	 {0, 1, 0}
+    fov           Vertical field of view in degree.          {90}
+
+`orthographic`:
+
+    position      The position.                              {0, 0, 0}
+    lookAt        A position which is centered in the image. {0, 0, 1}
+    direction     Alternative to lookAt: a direction.        {0, 0, 1}
+                  Does not need to be normalized.
+    up            Up orientation of the camera (not y axis)	 {0, 1, 0}
+    left          Left clipping plane in view space.         {-1}
+	right         Right clipping plane in view space.        {1}
+	bottom        Bottom clipping plane in view space.       {-1}
+	top           Top clipping plane in view space.          {1}
+	near          Near clipping plane in view space.         {0}
+	far           Far clipping plane in view space.          {1e30}
+
+`focus`: A perspective projection wich simulates DOF of a thin lens.
+
+	position      The position.                              {0, 0, 0}
+	lookAt        A position which is centered in the image. {0, 0, 1}
+	direction     Alternative to lookAt: a direction.        {0, 0, 1}
+                  Does not need to be normalized.
+    up            Up orientation of the camera (not y axis)	 {0, 1, 0}
+	focalLength   Focal length of the lens in [mm].          {20}
+	focusDistance Distance to the sharp plane in [m]         {1}
+	sensorSize    Vertical size of the sensor in [mm]        {24}
+	aperture      Aperture in f-stops (1.0, 1.4, ...)        {1.0}
+
 ### "sensor" ###
 Defines the image resolution and post processing.
 
@@ -211,7 +253,7 @@ Light types are:
 	intensityScale	Unitless scaling factor which is multiplied with the value of the map.
     position
 
-`envmap`
+`environment`
 
     radianceMap         A single .dds or .ktx texture containing a cube map (HDR: [cd/m^2]).
 

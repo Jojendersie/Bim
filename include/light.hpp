@@ -18,11 +18,11 @@ namespace bim {
 			GONIOMETRIC,
 			ENVIRONMENT,
 
-			NUM
+			NUM_TYPES
 		};
 		ENUM_CONVERT_FUNC(Type)
 
-		Light(Type _type, const char* _name = nullptr) :
+		explicit Light(Type _type, const char* _name = nullptr) :
 			type(_type)
 		{
 			static int s_genericLightName = 0;
@@ -37,7 +37,7 @@ namespace bim {
 
 	struct PointLight : public Light
 	{
-		PointLight(const char* _name = nullptr) :
+		explicit PointLight(const char* _name = nullptr) :
 			Light(Type::POINT, _name)
 		{}
 
@@ -53,7 +53,7 @@ namespace bim {
 
 	struct LambertLight : public Light
 	{
-		LambertLight(const char* _name = nullptr) :
+		explicit LambertLight(const char* _name = nullptr) :
 			Light(Type::LAMBERT, _name)
 		{}
 
@@ -71,7 +71,7 @@ namespace bim {
 
 	struct DirectionalLight : public Light
 	{
-		DirectionalLight(const char* _name = nullptr) :
+		explicit DirectionalLight(const char* _name = nullptr) :
 			Light(Type::DIRECTIONAL, _name)
 		{}
 
@@ -90,7 +90,7 @@ namespace bim {
 	// with t is dot(spot.direction, query.direction)
 	struct SpotLight : public Light
 	{
-		SpotLight(const char* _name = nullptr) :
+		explicit SpotLight(const char* _name = nullptr) :
 			Light(Type::SPOT, _name)
 		{}
 
@@ -113,7 +113,7 @@ namespace bim {
 	// Preetham skylight model with a few parameters
 	struct SkyLight : public Light
 	{
-		SkyLight(const char* _name = nullptr) :
+		explicit SkyLight(const char* _name = nullptr) :
 			Light(Type::SPOT, _name)
 		{}
 
@@ -131,7 +131,7 @@ namespace bim {
 
 	struct GoniometricLight : public Light
 	{
-		GoniometricLight(const char* _name = nullptr) :
+		explicit GoniometricLight(const char* _name = nullptr) :
 			Light(Type::GONIOMETRIC, _name)
 		{}
 
@@ -149,11 +149,11 @@ namespace bim {
 
 	struct EnvironmentLight : public Light
 	{
-		EnvironmentLight(const char* _name = nullptr) :
+		explicit EnvironmentLight(const char* _name = nullptr) :
 			Light(Type::ENVIRONMENT, _name)
 		{}
 
-		EnvironmentLight(const std::string& _radianceMap, const char* _name = nullptr) :
+		explicit EnvironmentLight(const std::string& _radianceMap, const char* _name = nullptr) :
 			Light(Type::ENVIRONMENT, _name),
 			radianceMap(_radianceMap)
 		{}

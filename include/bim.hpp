@@ -3,6 +3,7 @@
 #include "chunk.hpp"
 #include "material.hpp"
 #include "scenario.hpp"
+#include "camera.hpp"
 #include <fstream>
 #include <ei/3dtypes.hpp>
 
@@ -20,7 +21,7 @@ namespace bim {
 	class BinaryModel
 	{
 	public:
-		BinaryModel(Property::Val _properties = Property::Val(Property::POSITION | Property::TRIANGLE_IDX));
+		explicit BinaryModel(Property::Val _properties = Property::Val(Property::POSITION | Property::TRIANGLE_IDX));
 		
 		/// Preload the model meta informations.
 		/// To truly load the data call makeChunkResident() for the portions you need.
@@ -50,7 +51,7 @@ namespace bim {
 		///	direction.
 		void split(const ei::IVec3& _numChunks);
 		
-		const ei::IVec3 getNumChunks() const { return m_numChunks; }
+		const ei::IVec3& getNumChunks() const { return m_numChunks; }
 		Chunk* getChunk(const ei::IVec3& _chunkPos) { return &m_chunks[dot(_chunkPos, m_dimScale)]; }
 		
 		/// Check if a chunk is loaded and if not do it.
@@ -69,7 +70,7 @@ namespace bim {
 		Material& getMaterial(uint _index) { return m_materials[m_materialIndirection[_index]]; }
 		const Material& getMaterial(uint _index) const { return m_materials[m_materialIndirection[_index]]; }
 		void addMaterial(const Material& _material);
-		uint getNumMaterials() const { return (uint)m_materials.size(); }
+		uint getNumMaterials() const { return static_cast<uint>(m_materials.size()); }
 		/// Get the index of a named material. If the material is not found -1 is returned.
 		int findMaterial(const std::string& _name);
 
@@ -85,14 +86,14 @@ namespace bim {
 		/// If the property does not exist this command will do nothing.
 		void setAccelerator(Property::Val _accelerator) { if(m_chunks[0].m_properties & _accelerator) m_accelerator = _accelerator; }
 
-		uint getNumScenarios() const { return (uint)m_scenarios.size(); }
+		uint getNumScenarios() const { return static_cast<uint>(m_scenarios.size()); }
 		/// Scenarios can be accessed by index or by name (by index is faster)
 		Scenario* getScenario(uint _index);
 		Scenario* getScenario(const std::string& _name);
 		/// Create a new scenario and obtain its reference
 		Scenario* addScenario(const std::string& _name);
 
-		uint getNumLights() const { return (uint)m_lights.size(); }
+		uint getNumLights() const { return static_cast<uint>(m_lights.size()); }
 		/// Lights can be accessed by index or by name (by index is faster)
 		std::shared_ptr<Light> getLight(uint _index);
 		std::shared_ptr<Light> getLight(const std::string& _name);
@@ -101,6 +102,7 @@ namespace bim {
 		std::string loadEnv(const char* _envFile, bool _ignoreBinary);
 		void loadMaterial(Json & json, const JsonValue & _matNode);
 		void loadLight(Json & json, const JsonValue & _lightNode);
+		void loadCamera(Json & json, const JsonValue & _camNode);
 
 		enum class ChunkState {
 			LOADED,
@@ -117,6 +119,7 @@ namespace bim {
 		std::vector<Material> m_materials;
 		std::vector<uint> m_materialIndirection;
 		std::vector<std::shared_ptr<Light>> m_lights;
+		std::vector<std::shared_ptr<Camera>> m_cameras;
 		std::vector<Scenario> m_scenarios;
 		Property::Val m_requestedProps;	///< All properties for which the getter should succeed.
 		Property::Val m_optionalProperties;

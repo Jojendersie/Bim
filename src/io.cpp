@@ -834,7 +834,7 @@ namespace bim {
 				if(sc.hasLight(light))
 					scenarioNames.push_back(sc.getName().c_str());
 			}
-			json.value(scenarioNames.data(), (int)scenarioNames.size());
+			json.value(scenarioNames.data(), static_cast<int>(scenarioNames.size()));
 			json.endObject();
 		}
 		json.endObject();
@@ -899,6 +899,15 @@ namespace bim {
 				json.value(c->aperture);
 			} break;
 			}
+			// Find all scenarios which reference this light
+			json.valuePreamble("scenario");
+			std::vector<const char*> scenarioNames;
+			for(auto & sc : m_scenarios)
+			{
+				if(sc.getCamera() == cam)
+					scenarioNames.push_back(sc.getName().c_str());
+			}
+			json.value(scenarioNames.data(), static_cast<int>(scenarioNames.size()));
 			json.endObject();
 		}
 		json.endObject();

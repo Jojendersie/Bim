@@ -70,7 +70,7 @@ namespace bim {
 		Material* getMaterial(uint _index) { auto it = m_materials.find(m_materialIndirection[_index]); if(it != m_materials.end()) return &it->second; else return nullptr; }
 		const Material* getMaterial(uint _index) const { auto it = m_materials.find(m_materialIndirection[_index]); if(it != m_materials.end()) return &it->second; else return nullptr; }
 		Material* addMaterial(const Material& _material);
-		uint getNumMaterials() const { return static_cast<uint>(m_materials.size()); }
+		uint getNumUsedMaterials() const { return static_cast<uint>(m_materialIndirection.size()); }
 		/// Get the index of a named material. If the material is not found -1 is returned.
 		int getUniqueMaterialIndex(const std::string& _name);
 		Material* getMaterial(const std::string& _name) { auto it = m_materials.find(_name); if(it != m_materials.end()) return &it->second; else return nullptr; }

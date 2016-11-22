@@ -629,6 +629,7 @@ namespace bim {
 		float focusDistance = 1.0f;
 		float sensorSize = 24.0f;
 		float aperture = 1.0f;
+		float velocity = 1.0f;
 		const char* scenarioName = nullptr;
 
 		JsonValue camProp;
@@ -651,6 +652,7 @@ namespace bim {
 				else if(strcmp(camProp.getName(), "sensorSize") == 0) sensorSize = camProp.getFloat();
 				else if(strcmp(camProp.getName(), "aperture") == 0) aperture = camProp.getFloat();
 				else if(strcmp(camProp.getName(), "scenario") == 0) scenarioName = camProp.getString();
+				else if(strcmp(camProp.getName(), "velocity") == 0) velocity = camProp.getFloat();
 			} while(json.next(camProp, camProp));
 		}
 
@@ -669,6 +671,7 @@ namespace bim {
 			std::cerr << "Camera " << _camNode.getName() << " does not have a type!\n";
 			return;
 		}
+		m_cameras.back()->veclocity = velocity;
 
 		if(scenarioName)
 		{

@@ -67,12 +67,14 @@ namespace bim {
 
 		/// Get a material by its index (the same as used int TRIANGLE_MAT).
 		/// The index is guaranteed to be non changing.
-		Material& getMaterial(uint _index) { return m_materials[m_materialIndirection[_index]]; }
-		const Material& getMaterial(uint _index) const { return m_materials[m_materialIndirection[_index]]; }
-		uint addMaterial(const Material& _material);
+		Material* getMaterial(uint _index) { auto it = m_materials.find(m_materialIndirection[_index]); if(it != m_materials.end()) return &it->second; else return nullptr; }
+		const Material* getMaterial(uint _index) const { auto it = m_materials.find(m_materialIndirection[_index]); if(it != m_materials.end()) return &it->second; else return nullptr; }
+		Material* addMaterial(const Material& _material);
 		uint getNumMaterials() const { return static_cast<uint>(m_materials.size()); }
 		/// Get the index of a named material. If the material is not found -1 is returned.
-		int findMaterial(const std::string& _name);
+		int getUniqueMaterialIndex(const std::string& _name);
+		Material* getMaterial(const std::string& _name) { auto it = m_materials.find(_name); if(it != m_materials.end()) return &it->second; else return nullptr; }
+		const Material* getMaterial(const std::string& _name) const { auto it = m_materials.find(_name); if(it != m_materials.end()) return &it->second; else return nullptr; }
 
 		const ei::Box& getBoundingBox() const { return m_boundingBox; }
 		/// Global parameter for the chunk->buildHierarchy().
@@ -116,8 +118,8 @@ namespace bim {
 		ei::IVec3 m_dimScale;			///< Vector to transform 3D index into 1D (1, m_numChunks.x, m_numChunks.x*m_numChunks.y)
 		std::vector<ChunkState> m_chunkStates; // TODO: make atomic
 		std::vector<Chunk> m_chunks;
-		std::vector<Material> m_materials;
-		std::vector<uint> m_materialIndirection;
+		std::unordered_map<std::string, Material> m_materials;
+		std::vector<std::string> m_materialIndirection;
 		std::vector<std::shared_ptr<Light>> m_lights;
 		std::vector<std::shared_ptr<Camera>> m_cameras;
 		std::vector<Scenario> m_scenarios;

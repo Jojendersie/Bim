@@ -29,20 +29,24 @@ namespace bim {
 				m_boundingBox = ei::Box(m_boundingBox, m_chunks[i].m_boundingBox);
 	}
 
-	uint BinaryModel::addMaterial(const Material& _material)
+	Material* BinaryModel::addMaterial(const Material& _material)
 	{
-		uint index = static_cast<uint>(m_materials.size());
-		m_materialIndirection.push_back(index);
-		m_materials.push_back(_material);
-		return index;
+		return &m_materials.emplace(_material.m_name, _material).first->second;
 	}
 
-	int BinaryModel::findMaterial(const std::string& _name)
+	int BinaryModel::getUniqueMaterialIndex(const std::string& _name)
 	{
 		for(size_t i = 0; i < m_materialIndirection.size(); ++i)
 		{
-			if(m_materials[m_materialIndirection[i]].getName() == _name)
+			if(m_materialIndirection[i] == _name)
 				return static_cast<int>(i);
+		}
+		// The material is not indexed yet, but exists.
+		auto it = m_materials.find(_name);
+		if(it != m_materials.end())
+		{
+			m_materialIndirection.push_back(_name);
+			return static_cast<int>(m_materialIndirection.size() - 1);
 		}
 		return -1;
 	}

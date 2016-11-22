@@ -77,8 +77,8 @@ void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4
 		uint32 materialIndex = 0;
 		aiString aiName;
 		_scene->mMaterials[mesh->mMaterialIndex]->Get( AI_MATKEY_NAME, aiName );
-		int mi = _bim.findMaterial(aiName.C_Str());
-		if(mi > 0) materialIndex = mi;
+		int mi = _bim.getUniqueMaterialIndex(aiName.C_Str());
+		if(mi >= 0) materialIndex = mi;
 		else std::cerr << "WAR: Could not find the mesh material " << aiName.C_Str() << "!\n";
 
 		// Import and transform the geometry
@@ -149,82 +149,79 @@ void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
 		//bim::Material material(aiTmpStr.C_Str(), "legacy");
 
 		// Check if the material was imported before
-		int matIndex = _bim.findMaterial(aiTmpStr.C_Str());
-		if(matIndex == -1)
+		bim::Material* material = _bim.getMaterial(aiTmpStr.C_Str());
+		if(!material)
 		{
-			matIndex = _bim.addMaterial(bim::Material(aiTmpStr.C_Str(), "legacy"));
+			material = _bim.addMaterial(bim::Material(aiTmpStr.C_Str(), "legacy"));
 		}
-		bim::Material& material = _bim.getMaterial(matIndex);
-		if(material.getType() != "legacy")
+		if(material->getType() != "legacy")
 			continue;
 
 		// Load diffuse
-		if(!material.has("albedo")) // Check: if already existent do not change
+		if(!material->has("albedo")) // Check: if already existent do not change
 		{
 			if( mat->GetTexture( aiTextureType_DIFFUSE, 0, &aiTmpStr ) == AI_SUCCESS )
 			{
-				material.setTexture("albedo", aiTmpStr.C_Str());
+				material->setTexture("albedo", aiTmpStr.C_Str());
 			} else {
 				aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
 				mat->Get( AI_MATKEY_COLOR_DIFFUSE, color );
-				material.set("albedo", ei::Vec3(color.r, color.g, color.b));
+				material->set("albedo", ei::Vec3(color.r, color.g, color.b));
 			}
 		}
 
 		// Load specular
-		if(!material.has("specularColor"))
+		if(!material->has("specularColor"))
 		{
 			if( mat->GetTexture( aiTextureType_SPECULAR, 0, &aiTmpStr ) == AI_SUCCESS )
 			{
-				material.setTexture("specularColor", aiTmpStr.C_Str());
+				material->setTexture("specularColor", aiTmpStr.C_Str());
 			} else {
 				aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
 				if( mat->Get( AI_MATKEY_COLOR_REFLECTIVE, color ) != AI_SUCCESS )
 					mat->Get( AI_MATKEY_COLOR_SPECULAR, color );
-				material.set("specularColor", ei::Vec3(color.r, color.g, color.b));
+				material->set("specularColor", ei::Vec3(color.r, color.g, color.b));
 			}
 		}
-		if(!material.has("roughness"))
+		if(!material->has("roughness"))
 		{
 			if( mat->GetTexture( aiTextureType_SHININESS, 0, &aiTmpStr ) == AI_SUCCESS )
 			{
 				//material.setTexture("shininess", aiTmpStr.C_Str());
-				material.set("roughness", 1.0f);
+				material->set("roughness", 1.0f);
 			} else {
 				float shininess = 1.0f;
 				mat->Get( AI_MATKEY_SHININESS, shininess );
 				//material.set("reflectivity", shininess);
-				material.set("roughness", 1.0f / (shininess * shininess));
+				material->set("roughness", 1.0f / (shininess * shininess));
 			}
 		}
 
 		// Load opacity
-		if(!material.has("opacity")) 
+		if(!material->has("opacity")) 
 		{
 			if( mat->GetTexture( aiTextureType_OPACITY, 0, &aiTmpStr ) == AI_SUCCESS )
 			{
-				material.setTexture("opacity", aiTmpStr.C_Str());
+				material->setTexture("opacity", aiTmpStr.C_Str());
 			} else {
 				float opacity = 1.0f;
 				mat->Get( AI_MATKEY_OPACITY, opacity );
-				material.set("opacity", opacity);
+				material->set("opacity", opacity);
 			}
 		}
 
 		// Load emissivity
-		if(!material.has("emissivity"))
+		if(!material->has("emissivity"))
 		{
 			if( mat->GetTexture( aiTextureType_EMISSIVE, 0, &aiTmpStr ) == AI_SUCCESS )
 			{
-				material.setTexture("emissivity", aiTmpStr.C_Str());
+				material->setTexture("emissivity", aiTmpStr.C_Str());
 			} else {
 				aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
 				mat->Get( AI_MATKEY_COLOR_EMISSIVE, color );
-				material.set("emissivity", ei::Vec3(color.r, color.g, color.b));
+				material->set("emissivity", ei::Vec3(color.r, color.g, color.b));
 			}
 		}
-
-		_bim.addMaterial(material);
 	}
 }
 

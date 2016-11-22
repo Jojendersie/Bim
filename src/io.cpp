@@ -140,15 +140,7 @@ namespace bim {
 				for(uint i = 0; i < num; ++i)
 				{
 					m_file.read(buf, 64);
-					// Find the referenced material
-					uint index = 0;
-					for(auto& mat : m_materials)
-					{
-						if(strcmp(mat.getName().c_str(), buf) == 0)
-							break;
-						index++;
-					}
-					m_materialIndirection.push_back(index);
+					m_materialIndirection.push_back(buf);
 				}
 			} else
 				m_file.seekg(header.size, std::ios_base::cur);
@@ -165,8 +157,8 @@ namespace bim {
 		// to all existing materials.
 		if(m_materialIndirection.empty())
 		{
-			for(size_t i = 0; i < m_materials.size(); ++i)
-				m_materialIndirection.push_back((uint)i);
+			for(auto it : m_materials)
+				m_materialIndirection.push_back(it.second.getName());
 		}
 
 		return true;
@@ -202,12 +194,10 @@ namespace bim {
 		file.write(reinterpret_cast<char*>(&ibuf), sizeof(uint32));
 		//file.write(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 		char zeroBuf[64] = {0};
-		for(uint idx : m_materialIndirection)
+		for(auto& str : m_materialIndirection)
 		{
-			const char* str = m_materials[idx].getName().c_str();
-			size_t len = strlen(str);
-			file.write(str, len+1);
-			file.write(zeroBuf, 63 - len);
+			file.write(str.c_str(), str.length()+1);
+			file.write(zeroBuf, 63 - str.length());
 		}
 	}
 
@@ -511,12 +501,10 @@ namespace bim {
 					if(json.next(v, v)) {value.values[2] = v.getFloat(); value.numComponents = 3;}
 					if(json.next(v, v)) {value.values[3] = v.getFloat(); value.numComponents = 4;}
 					mat.m_values.emplace(matProp.getName(), value);
-				} else if(matProp.getType() == JsonValue::Type::FLOAT)
+				} else
 					mat.m_values.emplace(matProp.getName(), Material::MultiValue{ei::Vec4(matProp.getFloat(), 0.0f, 0.0f, 0.0f), 1});
-				else if(matProp.getType() == JsonValue::Type::INT)
-					mat.m_values.emplace(matProp.getName(), Material::MultiValue{ei::Vec4((float)matProp.getInt(), 0.0f, 0.0f, 0.0f), 1});
 			} while(json.next(matProp, matProp));
-		m_materials.push_back(mat);
+		m_materials.emplace(mat.getName(), mat);
 	}
 
 	static ei::Vec3 readVec3(Json & json, const JsonValue & _lightProp)
@@ -750,16 +738,16 @@ namespace bim {
 		json.beginObject();
 		for(auto& mat : m_materials)
 		{
-			json.valuePreamble(mat.getName().c_str());
+			json.valuePreamble(mat.second.getName().c_str());
 			json.beginObject();
 			json.valuePreamble("type");
-			json.value(mat.getType().c_str());
-			for(auto& tex : mat.m_textureNames)
+			json.value(mat.second.getType().c_str());
+			for(auto& tex : mat.second.m_textureNames)
 			{
 				json.valuePreamble(tex.first.c_str());
 				json.value(tex.second.c_str());
 			}
-			for(auto& val : mat.m_values)
+			for(auto& val : mat.second.m_values)
 			{
 				json.valuePreamble(val.first.c_str());
 				json.value(val.second.values.m_data, val.second.numComponents);

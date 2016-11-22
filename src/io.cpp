@@ -671,7 +671,7 @@ namespace bim {
 			std::cerr << "Camera " << _camNode.getName() << " does not have a type!\n";
 			return;
 		}
-		m_cameras.back()->veclocity = velocity;
+		m_cameras.back()->velocity = velocity;
 
 		if(scenarioName)
 		{

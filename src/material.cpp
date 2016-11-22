@@ -21,7 +21,7 @@ namespace bim {
 		return nullptr;
 	}
 
-	const float Material::get(const std::string & _name, const float _default) const
+	float Material::get(const std::string & _name, const float _default) const
 	{
 		auto it = m_values.find(_name);
 		if(it != m_values.end())

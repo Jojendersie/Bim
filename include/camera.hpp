@@ -19,7 +19,7 @@ namespace bim {
 
 		explicit Camera(Type _type, const char* _name = nullptr) :
 			type(_type),
-			veclocity(1.0f)
+			velocity(1.0f)
 		{
 			static int s_genericCameraName = 0;
 			if(_name) name = _name;
@@ -29,7 +29,7 @@ namespace bim {
 
 		const Type type;
 		std::string name;
-		float veclocity;
+		float velocity;
 	};
 
 	struct PerspectiveCamera : public Camera

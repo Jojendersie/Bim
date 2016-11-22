@@ -477,6 +477,11 @@ namespace bim {
 				if(json.child(lvl1Node, lightNode))
 					do { loadLight(json, lightNode); }
 					while(json.next(lightNode, lightNode));
+			} else if(strcmp(lvl1Node.getName(), "cameras") == 0) {
+				JsonValue camNode;
+				if(json.child(lvl1Node, camNode))
+					do { loadCamera(json, camNode); }
+				while(json.next(camNode, camNode));
 			}
 		} while(json.next(lvl1Node, lvl1Node));
 
@@ -630,7 +635,7 @@ namespace bim {
 		float sensorSize = 24.0f;
 		float aperture = 1.0f;
 		float velocity = 1.0f;
-		const char* scenarioName = nullptr;
+		std::vector<const char*> scenarios;
 
 		JsonValue camProp;
 		if(json.child(_camNode, camProp))
@@ -640,7 +645,7 @@ namespace bim {
 				else if(strcmp(camProp.getName(), "position") == 0) position = readVec3(json, camProp);
 				else if(strcmp(camProp.getName(), "lookAt") == 0) lookAt = readVec3(json, camProp);
 				else if(strcmp(camProp.getName(), "up") == 0) up = readVec3(json, camProp);
-				else if(strcmp(camProp.getName(), "fov") == 0) fieldOfView = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "fov") == 0) fieldOfView = camProp.getFloat() / 180.0f * 3.141592654f;
 				else if(strcmp(camProp.getName(), "left") == 0) left = camProp.getFloat();
 				else if(strcmp(camProp.getName(), "right") == 0) right = camProp.getFloat();
 				else if(strcmp(camProp.getName(), "bottom") == 0) bottom = camProp.getFloat();
@@ -651,8 +656,19 @@ namespace bim {
 				else if(strcmp(camProp.getName(), "focusDistance") == 0) focusDistance = camProp.getFloat();
 				else if(strcmp(camProp.getName(), "sensorSize") == 0) sensorSize = camProp.getFloat();
 				else if(strcmp(camProp.getName(), "aperture") == 0) aperture = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "scenario") == 0) scenarioName = camProp.getString();
-				else if(strcmp(camProp.getName(), "velocity") == 0) velocity = camProp.getFloat();
+				else if(strcmp(camProp.getName(), "scenario") == 0) 
+				{
+					if(camProp.getType() == JsonValue::Type::ARRAY)
+					{
+						JsonValue v;
+						json.child(camProp, v);
+						do {
+							scenarios.push_back(v.getString());
+						} while(json.next(v, v));
+					} else {
+						std::cerr << "Error while loading camera " << _camNode.getName() << ": scenarios must be an array of strings!\n";
+					}
+				} else if(strcmp(camProp.getName(), "velocity") == 0) velocity = camProp.getFloat();
 			} while(json.next(camProp, camProp));
 		}
 
@@ -673,7 +689,7 @@ namespace bim {
 		}
 		m_cameras.back()->velocity = velocity;
 
-		if(scenarioName)
+		for(auto scenarioName : scenarios)
 		{
 			Scenario* scenario = getScenario(scenarioName);
 			if(!scenario)

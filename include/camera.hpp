@@ -49,7 +49,7 @@ namespace bim {
 		ei::Vec3 position;
 		ei::Vec3 lookAt;
 		ei::Vec3 up;
-		float verticalFOV;
+		float verticalFOV;	// Vertical field of view in radiants
 	};
 
 	struct OrthographicCamera : public Camera

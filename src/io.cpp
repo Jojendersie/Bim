@@ -870,7 +870,7 @@ namespace bim {
 				json.valuePreamble("up");
 				json.value(reinterpret_cast<float*>(&c->up), 3);
 				json.valuePreamble("fov");
-				json.value(c->verticalFOV);
+				json.value(c->verticalFOV * 180.0f / 3.141592654f);
 			} break;
 			case Camera::Type::ORTHOGRAPHIC: {
 				OrthographicCamera* c = dynamic_cast<OrthographicCamera*>(cam.get());

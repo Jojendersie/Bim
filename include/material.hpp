@@ -35,6 +35,8 @@ namespace bim {
 		void set(const std::string& _name, const ei::Vec2& _value);
 		void set(const std::string& _name, const ei::Vec3& _value);
 		void set(const std::string& _name, const ei::Vec4& _value);
+		// Check if a specific attribute exists (in textures or values).
+		bool has(const std::string& _name) const;
 		// Add or replace a texture value
 		void setTexture(const std::string& _name, std::string _textureFile);
 	private:

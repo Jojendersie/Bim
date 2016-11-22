@@ -146,62 +146,82 @@ void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
 		aiString aiTmpStr;
 		// Get name and create new material with that name
 		mat->Get( AI_MATKEY_NAME, aiTmpStr );
-		bim::Material material(aiTmpStr.C_Str(), "legacy");
+		//bim::Material material(aiTmpStr.C_Str(), "legacy");
 
 		// Check if the material was imported before
-		if(_bim.findMaterial(material.getName()) != -1)
+		int matIndex = _bim.findMaterial(aiTmpStr.C_Str());
+		if(matIndex == -1)
+		{
+			matIndex = _bim.addMaterial(bim::Material(aiTmpStr.C_Str(), "legacy"));
+		}
+		bim::Material& material = _bim.getMaterial(matIndex);
+		if(material.getType() != "legacy")
 			continue;
 
 		// Load diffuse
-		if( mat->GetTexture( aiTextureType_DIFFUSE, 0, &aiTmpStr ) == AI_SUCCESS )
+		if(!material.has("albedo")) // Check: if already existent do not change
 		{
-			material.setTexture("albedo", aiTmpStr.C_Str());
-		} else {
-			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
-			mat->Get( AI_MATKEY_COLOR_DIFFUSE, color );
-			material.set("albedo", ei::Vec3(color.r, color.g, color.b));
+			if( mat->GetTexture( aiTextureType_DIFFUSE, 0, &aiTmpStr ) == AI_SUCCESS )
+			{
+				material.setTexture("albedo", aiTmpStr.C_Str());
+			} else {
+				aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
+				mat->Get( AI_MATKEY_COLOR_DIFFUSE, color );
+				material.set("albedo", ei::Vec3(color.r, color.g, color.b));
+			}
 		}
 
 		// Load specular
-		// TODO: roughness?
-		if( mat->GetTexture( aiTextureType_SPECULAR, 0, &aiTmpStr ) == AI_SUCCESS )
+		if(!material.has("specularColor"))
 		{
-			material.setTexture("specularColor", aiTmpStr.C_Str());
-		} else {
-			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
-			if( mat->Get( AI_MATKEY_COLOR_REFLECTIVE, color ) != AI_SUCCESS )
-				mat->Get( AI_MATKEY_COLOR_SPECULAR, color );
-			material.set("specularColor", ei::Vec3(color.r, color.g, color.b));
+			if( mat->GetTexture( aiTextureType_SPECULAR, 0, &aiTmpStr ) == AI_SUCCESS )
+			{
+				material.setTexture("specularColor", aiTmpStr.C_Str());
+			} else {
+				aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
+				if( mat->Get( AI_MATKEY_COLOR_REFLECTIVE, color ) != AI_SUCCESS )
+					mat->Get( AI_MATKEY_COLOR_SPECULAR, color );
+				material.set("specularColor", ei::Vec3(color.r, color.g, color.b));
+			}
 		}
-		if( mat->GetTexture( aiTextureType_SHININESS, 0, &aiTmpStr ) == AI_SUCCESS )
+		if(!material.has("roughness"))
 		{
-			material.setTexture("shininess", aiTmpStr.C_Str());
-			material.set("roughness", 1.0f);
-		} else {
-			float shininess = 1.0f;
-			mat->Get( AI_MATKEY_SHININESS, shininess );
-			material.set("reflectivity", shininess);
-			material.set("roughness", 1.0f / (shininess * shininess));
+			if( mat->GetTexture( aiTextureType_SHININESS, 0, &aiTmpStr ) == AI_SUCCESS )
+			{
+				//material.setTexture("shininess", aiTmpStr.C_Str());
+				material.set("roughness", 1.0f);
+			} else {
+				float shininess = 1.0f;
+				mat->Get( AI_MATKEY_SHININESS, shininess );
+				//material.set("reflectivity", shininess);
+				material.set("roughness", 1.0f / (shininess * shininess));
+			}
 		}
 
 		// Load opacity
-		if( mat->GetTexture( aiTextureType_OPACITY, 0, &aiTmpStr ) == AI_SUCCESS )
+		if(!material.has("opacity")) 
 		{
-			material.setTexture("opacity", aiTmpStr.C_Str());
-		} else {
-			float opacity = 1.0f;
-			mat->Get( AI_MATKEY_OPACITY, opacity );
-			material.set("opacity", opacity);
+			if( mat->GetTexture( aiTextureType_OPACITY, 0, &aiTmpStr ) == AI_SUCCESS )
+			{
+				material.setTexture("opacity", aiTmpStr.C_Str());
+			} else {
+				float opacity = 1.0f;
+				mat->Get( AI_MATKEY_OPACITY, opacity );
+				material.set("opacity", opacity);
+			}
 		}
 
 		// Load emissivity
-		if( mat->GetTexture( aiTextureType_EMISSIVE, 0, &aiTmpStr ) == AI_SUCCESS )
+		if(!material.has("emissivity"))
 		{
-			material.setTexture("emissivity", aiTmpStr.C_Str());
-		} else {
-			aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
-			mat->Get( AI_MATKEY_COLOR_EMISSIVE, color );
-			material.set("emissivity", ei::Vec3(color.r, color.g, color.b));
+			if( mat->GetTexture( aiTextureType_EMISSIVE, 0, &aiTmpStr ) == AI_SUCCESS )
+			{
+				material.setTexture("emissivity", aiTmpStr.C_Str());
+			} else {
+				aiColor3D color = aiColor3D( 0.0f, 0.0f, 0.0f );
+				mat->Get( AI_MATKEY_COLOR_EMISSIVE, color );
+				material.set("emissivity", ei::Vec3(color.r, color.g, color.b));
+			}
 		}
 
 		_bim.addMaterial(material);
@@ -282,6 +302,7 @@ int main(int _numArgs, const char** _args)
 	std::cerr << "    Vertices: " << numVertices << '\n';
 	std::cerr << "    Triangles: " << numTriangles << '\n';
 	bim::BinaryModel model(properties);
+	model.loadEnvironmentFile(outputJsonFile.c_str());
 	// TODO: argument
 	model.setNumTrianglesPerLeaf(2);
 	// Fill the model with data

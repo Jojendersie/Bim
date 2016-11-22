@@ -1,5 +1,7 @@
 #include "bim.hpp"
 
+#include <iostream>
+
 namespace bim {
 
 	BinaryModel::BinaryModel(Property::Val _properties) :
@@ -27,10 +29,12 @@ namespace bim {
 				m_boundingBox = ei::Box(m_boundingBox, m_chunks[i].m_boundingBox);
 	}
 
-	void BinaryModel::addMaterial(const Material& _material)
+	uint BinaryModel::addMaterial(const Material& _material)
 	{
-		m_materialIndirection.push_back((uint32)m_materials.size());
+		uint index = static_cast<uint>(m_materials.size());
+		m_materialIndirection.push_back(index);
 		m_materials.push_back(_material);
+		return index;
 	}
 
 	int BinaryModel::findMaterial(const std::string& _name)
@@ -38,7 +42,7 @@ namespace bim {
 		for(size_t i = 0; i < m_materialIndirection.size(); ++i)
 		{
 			if(m_materials[m_materialIndirection[i]].getName() == _name)
-				return (int)i;
+				return static_cast<int>(i);
 		}
 		return -1;
 	}
@@ -92,9 +96,9 @@ namespace bim {
 	void BinaryModel::addLight(std::shared_ptr<Light> _light)
 	{
 #ifdef DEBUG
-		if(getLight(_name)) {
+		if(getLight(_light->name)) {
 			std::cerr << "There is already a light with the same name!\n";
-			return nullptr;
+			return;
 		}
 #endif
 		m_lights.push_back(_light);

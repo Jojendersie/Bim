@@ -72,7 +72,14 @@ namespace bim {
 	{
 		m_values[_name] = MultiValue{_value, 4};
 	}
-	
+
+	bool Material::has(const std::string & _name) const
+	{
+		if( m_values.find(_name) != m_values.end()) return true;
+		if( m_textureNames.find(_name) != m_textureNames.end()) return true;
+		return false;
+	}
+
 	void Material::setTexture(const std::string& _name, std::string _textureFile)
 	{
 		m_textureNames[_name] = move(_textureFile);

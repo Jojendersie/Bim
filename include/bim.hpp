@@ -69,7 +69,7 @@ namespace bim {
 		/// The index is guaranteed to be non changing.
 		Material& getMaterial(uint _index) { return m_materials[m_materialIndirection[_index]]; }
 		const Material& getMaterial(uint _index) const { return m_materials[m_materialIndirection[_index]]; }
-		void addMaterial(const Material& _material);
+		uint addMaterial(const Material& _material);
 		uint getNumMaterials() const { return static_cast<uint>(m_materials.size()); }
 		/// Get the index of a named material. If the material is not found -1 is returned.
 		int findMaterial(const std::string& _name);

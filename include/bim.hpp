@@ -98,7 +98,9 @@ namespace bim {
 		uint getNumLights() const { return static_cast<uint>(m_lights.size()); }
 		/// Lights can be accessed by index or by name (by index is faster)
 		std::shared_ptr<Light> getLight(uint _index);
+		std::shared_ptr<const Light> getLight(uint _index) const { return const_cast<BinaryModel*>(this)->getLight(_index); }
 		std::shared_ptr<Light> getLight(const std::string& _name);
+		std::shared_ptr<const Light> getLight(const std::string& _name) const { return const_cast<BinaryModel*>(this)->getLight(_name); }
 		void addLight(std::shared_ptr<Light> _light);
 	private:
 		std::string loadEnv(const char* _envFile, bool _ignoreBinary);

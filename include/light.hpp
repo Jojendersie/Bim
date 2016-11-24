@@ -7,8 +7,9 @@
 namespace bim {
 
 	// Base class to simplify interfaces with arbitrary light types.
-	struct Light
+	class Light
 	{
+	public:
 		enum class Type {
 			POINT,
 			LAMBERT,
@@ -35,8 +36,9 @@ namespace bim {
 		std::string name;
 	};
 
-	struct PointLight : public Light
+	class PointLight : public Light
 	{
+	public:
 		explicit PointLight(const char* _name = nullptr) :
 			Light(Type::POINT, _name)
 		{}
@@ -51,8 +53,9 @@ namespace bim {
 		ei::Vec3 intensity;		// [cd = lm / sr]
 	};
 
-	struct LambertLight : public Light
+	class LambertLight : public Light
 	{
+	public:
 		explicit LambertLight(const char* _name = nullptr) :
 			Light(Type::LAMBERT, _name)
 		{}
@@ -69,8 +72,9 @@ namespace bim {
 		ei::Vec3 intensity;		// [cd = lm / sr]
 	};
 
-	struct DirectionalLight : public Light
+	class DirectionalLight : public Light
 	{
+	public:
 		explicit DirectionalLight(const char* _name = nullptr) :
 			Light(Type::DIRECTIONAL, _name)
 		{}
@@ -88,8 +92,9 @@ namespace bim {
 	// A spot light with the intensity distribution:
 	// I(t) = I0 * ((t - 1 + cos(halfAngle)) / cos(halfAngle))^falloff
 	// with t is dot(spot.direction, query.direction)
-	struct SpotLight : public Light
+	class SpotLight : public Light
 	{
+	public:
 		explicit SpotLight(const char* _name = nullptr) :
 			Light(Type::SPOT, _name)
 		{}
@@ -111,8 +116,9 @@ namespace bim {
 	};
 
 	// Preetham skylight model with a few parameters
-	struct SkyLight : public Light
+	class SkyLight : public Light
 	{
+	public:
 		explicit SkyLight(const char* _name = nullptr) :
 			Light(Type::SPOT, _name)
 		{}
@@ -129,8 +135,9 @@ namespace bim {
 		bool aerialPerspective;
 	};
 
-	struct GoniometricLight : public Light
+	class GoniometricLight : public Light
 	{
+	public:
 		explicit GoniometricLight(const char* _name = nullptr) :
 			Light(Type::GONIOMETRIC, _name)
 		{}
@@ -147,8 +154,9 @@ namespace bim {
 		std::string intensityMap;	// [cd = lm / sr]
 	};
 
-	struct EnvironmentLight : public Light
+	class EnvironmentLight : public Light
 	{
+	public:
 		explicit EnvironmentLight(const char* _name = nullptr) :
 			Light(Type::ENVIRONMENT, _name)
 		{}

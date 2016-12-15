@@ -494,7 +494,7 @@ namespace bim {
 				} else if(matProp.getType() == JsonValue::Type::ARRAY)
 				{
 					// Assume a float vector
-					Material::MultiValue value({0.0f, 1});
+					Material::MultiValue value({ei::Vec4(0.0f), 1});
 					JsonValue v; json.child(matProp, v);
 					value.values[0] = v.getFloat();
 					if(json.next(v, v)) {value.values[1] = v.getFloat(); value.numComponents = 2;}

@@ -57,7 +57,7 @@ namespace bim {
 			Vec3 triNormal, triTangent, triBitangent;
 			triNormal = normalize(cross(e0, e1));
 			// If there are invalid triangles (cause NaN) skip them
-			if(all(triNormal == triNormal))
+			if(triNormal == triNormal)
 			{
 				if(useTexCoords) {
 					Vec2 uva = m_texCoords0[m_triangles[i].y] - m_texCoords0[m_triangles[i].x];
@@ -67,8 +67,8 @@ namespace bim {
 					triTangent = (uvb.y * e0 - uva.y * e1) / det;
 					triBitangent = (uva.x * e1 - uvb.x * e0) / det;
 					// Try to recover direction if it got NaN
-					bool invalidTangent = !all(triTangent == triTangent) || len(triTangent) < 1e-10f;
-					bool invalidBitangent = !all(triBitangent == triBitangent) || len(triBitangent) < 1e-10f;
+					bool invalidTangent = !(triTangent == triTangent) || len(triTangent) < 1e-10f;
+					bool invalidBitangent = !(triBitangent == triBitangent) || len(triBitangent) < 1e-10f;
 					if(invalidTangent && invalidBitangent)
 					{
 						// Create a random orthonormal basis (no uv given)
@@ -80,8 +80,8 @@ namespace bim {
 							triBitangent = cross(triNormal, triTangent) * det;
 					if(!ei::orthonormalize(triNormal, triTangent, triBitangent))
 						triBitangent = cross(triNormal, triTangent);
-					eiAssert(all(triTangent == triTangent), "NaN in tangent computation!");
-					eiAssert(all(triBitangent == triBitangent), "NaN in bitangent computation!");
+					eiAssert((triTangent == triTangent), "NaN in tangent computation!");
+					eiAssert((triBitangent == triBitangent), "NaN in bitangent computation!");
 					eiAssert(approx(len(triTangent), 1.0f, 1e-4f), "Computed tangent has a wrong length!");
 					eiAssert(approx(len(triBitangent), 1.0f, 1e-4f), "Computed bitangent has a wrong length!");
 				}

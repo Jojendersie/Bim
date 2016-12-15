@@ -296,15 +296,15 @@ namespace bim {
 
 	bool Chunk::FullVertex::operator == (const FullVertex& _rhs) const
 	{
-		if(any(position != _rhs.position)) return false;
-		if(any(normal != _rhs.normal)) return false;
-		if(any(tangent != _rhs.tangent)) return false;
-		if(any(bitangent != _rhs.bitangent)) return false;
+		if(position != _rhs.position) return false;
+		if(normal != _rhs.normal) return false;
+		if(tangent != _rhs.tangent) return false;
+		if(bitangent != _rhs.bitangent) return false;
 		if(qormal != _rhs.qormal) return false;
-		if(any(texCoord0 != _rhs.texCoord0)) return false;
-		if(any(texCoord1 != _rhs.texCoord1)) return false;
-		if(any(texCoord2 != _rhs.texCoord2)) return false;
-		if(any(texCoord3 != _rhs.texCoord3)) return false;
+		if(texCoord0 != _rhs.texCoord0) return false;
+		if(texCoord1 != _rhs.texCoord1) return false;
+		if(texCoord2 != _rhs.texCoord2) return false;
+		if(texCoord3 != _rhs.texCoord3) return false;
 		if(color != _rhs.color) return false;
 		return true;
 	}

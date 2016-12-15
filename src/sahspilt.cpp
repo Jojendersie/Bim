@@ -72,7 +72,7 @@ namespace bim {
 		Vec3 λ;
 		decomposeQl( cov, Q, λ, false );
 		Vec3 splitDir;
-		eiAssert(all(λ >= -1e6), "Only positive eigenvalues expected!");
+		eiAssert((λ >= -1e6), "Only positive eigenvalues expected!");
 		if(λ.x > λ.y && λ.x > λ.z) splitDir = transpose(Q(0));
 		else if(λ.y > λ.z) splitDir = transpose(Q(1));
 		else splitDir = transpose(Q(2));

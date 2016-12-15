@@ -159,7 +159,7 @@ There are several types of materials:
     refractionIdxN  First part of complex valued refraction index. (S, RGB)         {1.3}
     refractionIdxK  Second part of complex valued refraction index. (S, RGB)        {0}
     emissivity      Exitant radiant energy (RGB) [cd/m^2]                           {0, 0, 0}
-    roughness       Surface roughness in [0,1], can be anisotropic (S, S+S+angle)   {0}
+    roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)    {0}
     reflectivity    A scale of the Fresnel term. (S) [0,1]                          {1}
     displacement    Displacement map, must be a texture (S)                         {NONE}
     absorption      Physical absorption coefficient σ_a. (S) [/m]                   {0.5}
@@ -175,7 +175,7 @@ There are several types of materials:
 
     color           Base color used to derive diffuse/spec color (RGB)              {0.5, 0.5, 0.5}
     metalness       Plastic like or metal like reflections [0,1] (S)                {0}
-    roughness       Surface roughness in [0,1], can be anisotropic (S, S+S+angle)   {0}
+    roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)    {0}
     reflectivity    A scale of the Fresnel term. (S) [0,1]                          {1}
     emissivity      Exitant radiant energy (RGB) [cd/m^2]                           {0, 0, 0}
     transmissivity  Percentage of transmitted light to the back face (RGB)          {0}
@@ -200,8 +200,8 @@ There are several types of materials:
     reflectivity    Isotropic amount of reflected light (offset term in Fresnel     {0.05}
                     approximations) [0,1] (S)
                     To avoid any reflections scale down the specularColor.
-    roughness       Surface roughness in [0,1], can be anisotropic (S, S+S+angle)   {0}
-    opacity         Degree of opacity (1-transparentcy) [0,1] (S).                  {1.0}
+    roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)   {0}
+    transmissivity  Degree of opacity (1-transparentcy) [0,1] (S).                  {0.0}
                     Color is taken from albedo.
     refractionIdxN  First part of complex valued refraction index. (S)              {1.3}
 	emissivity      Exitant radiant energy (RGB) [cd/m^2]                           {0, 0, 0}

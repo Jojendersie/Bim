@@ -259,7 +259,7 @@ int main(int _numArgs, const char** _args)
 	// Consistency check of input arguments
 	if(inputModelFile.empty()) { std::cerr << "ERR: Input file must be given!\n"; return 1; }
 	if(!(computeAAB || computeOB)) { std::cerr << "ERR: No BVH type is given!\n"; return 1; }
-	if(any(chunkGridRes < 1)) { std::cerr << "ERR: Invalid grid resolution!\n"; return 1; }
+	if(chunkGridRes < 1) { std::cerr << "ERR: Invalid grid resolution!\n"; return 1; }
 
 	// Derive output file name
 	std::string outputBimFile, outputJsonFile;
@@ -321,7 +321,7 @@ int main(int _numArgs, const char** _args)
 		std::cerr << "INF: removing redundant vertices...\n";
 		model.getChunk(ei::IVec3(0))->removeRedundantVertices();
 		std::cerr << "INF: computing tangent space...\n";
-		model.getChunk(ei::IVec3(0))->computeTangentSpace(bim::Property::Val(bim::Property::NORMAL | bim::Property::TANGENT | bim::Property::BITANGENT));
+		model.getChunk(ei::IVec3(0))->computeTangentSpace(bim::Property::Val(bim::Property::NORMAL | bim::Property::TANGENT | bim::Property::BITANGENT), false);
 		std::cerr << "INF: building BVH...\n";
 		model.getChunk(ei::IVec3(0))->buildHierarchy(method);
 		if(computeAAB) {

@@ -1,6 +1,5 @@
 #include "bim.hpp"
-
-#include <iostream>
+#include "error.hpp"
 
 namespace bim {
 
@@ -74,7 +73,7 @@ namespace bim {
 	{
 #ifdef DEBUG
 		if(getScenario(_name)) {
-			std::cerr << "There is already a scenario with the same name!\n";
+			sendMessage(MessageType::WARNING, "There is already a scenario with the same name!");
 			return nullptr;
 		}
 #endif
@@ -101,7 +100,7 @@ namespace bim {
 	{
 #ifdef DEBUG
 		if(getLight(_light->name)) {
-			std::cerr << "There is already a light with the same name!\n";
+			sendMessage(MessageType::WARNING, "There is already a light with the same name!");
 			return;
 		}
 #endif

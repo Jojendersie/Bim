@@ -1,5 +1,5 @@
 #include "chunk.hpp"
-#include <iostream>
+#include "error.hpp"
 
 using namespace ei;
 
@@ -20,7 +20,7 @@ namespace bim {
 				// If not existent compute the normals as usual and the other things as defaults.
 				useTexCoords = false;
 			} else {
-				std::cerr << "Can't compute tangent space. Texture coordinates missing.\n";
+				sendMessage(MessageType::ERROR, "Can't compute tangent space. Texture coordinates missing.");
 				return;
 			}
 		}

@@ -2,8 +2,8 @@
 #include "json.hpp"
 #include "../deps/miniz.c"
 #include "../deps/EnumConverter.h"
+#include "error.hpp"
 #include <fstream>
-#include <iostream>
 #include <memory>
 
 static const char* propertyString(bim::Property::Val _prop)
@@ -79,7 +79,7 @@ namespace bim {
 	{
 		std::string bimFile = loadEnv(_envFile, false);
 		if(bimFile.empty()) {
-			std::cerr << "The Environment-File did not contain a binary file reference!\n";
+			sendMessage(MessageType::ERROR, "The Environment-File did not contain a binary file reference!");
 			return false;
 		}
 
@@ -88,7 +88,7 @@ namespace bim {
 
 		m_file.open(bimFile, std::ios_base::binary);
 		if(m_file.fail()) {
-			std::cerr << "Cannot open scene file!\n";
+			sendMessage(MessageType::ERROR, "Cannot open scene file!");
 			return false;
 		}
 		SectionHeader header;
@@ -98,7 +98,7 @@ namespace bim {
 		//  * Get the jump addresses of each chunk.
 		m_file.read(reinterpret_cast<char*>(&header), sizeof(SectionHeader));
 		if((header.type != META_SECTION) || (header.size != sizeof(MetaSection))) {
-			std::cerr << "Invalid file. Meta-section not found!\n";
+			sendMessage(MessageType::ERROR, "Invalid file. Meta-section not found!");
 			return false;
 		}
 
@@ -149,7 +149,7 @@ namespace bim {
 		// Validation
 		if(m_chunks.size() != prod(m_numChunks))
 		{
-			std::cerr << "Missing chunks!\n";
+			sendMessage(MessageType::ERROR, "Missing chunks!");
 			return false;
 		}
 
@@ -172,7 +172,7 @@ namespace bim {
 	void BinaryModel::storeBinaryHeader(const char * _bimFile)
 	{
 		std::ofstream file(_bimFile, std::ios_base::binary | std::ios_base::out);
-		if(m_file.bad()) {std::cerr << "Cannot open file for writing!\n"; return;}
+		if(m_file.bad()) {sendMessage(MessageType::ERROR, "Cannot open file for writing!"); return;}
 		SectionHeader header;
 		header.uncompressedSize = 0;
 	
@@ -207,7 +207,7 @@ namespace bim {
 		if(_header.uncompressedSize)
 		{
 			if(_header.uncompressedSize % sizeof(T) != 0) {
-				std::cerr << "Error while loading a chunk: data size is incompatible with data type.\n";
+				sendMessage(MessageType::ERROR, "Error while loading a chunk: data size is incompatible with data type.");
 				return;
 			}
 			// Reserve the exact amount of memory
@@ -218,13 +218,13 @@ namespace bim {
 			mz_ulong size = (mz_ulong)_header.uncompressedSize;
 			int r = uncompress(reinterpret_cast<byte*>(_data.data()), &size, compressedBuffer.get(), (mz_ulong)_header.size);
 			if(r != Z_OK || _header.uncompressedSize != size) {
-				std::cerr << "Error in chunk decompression.\n";
+				sendMessage(MessageType::ERROR, "Error in chunk decompression.");
 				// TODO : more information
 				return;
 			}
 		} else {
 			if(_header.size % sizeof(T) != 0) {
-				std::cerr << "Error while loading a chunk: data size is incompatible with data type.\n";
+				sendMessage(MessageType::ERROR, "Error while loading a chunk: data size is incompatible with data type.");
 				return;
 			}
 			// Reserve the exact amount of memory
@@ -287,14 +287,14 @@ namespace bim {
 			if((m_requestedProps & m_chunks[idx].m_properties) != m_requestedProps)
 			{
 				// Warn here, but continue. Missing properties are filled by defaults.
-				std::cerr << "File does not contain the requested properties! Missing:\n";
+				sendMessage(MessageType::WARNING, "File does not contain the requested properties! Missing:");
 				// Fill in the missing chunk properties
 				Property::Val missing = Property::Val(m_requestedProps ^ (m_requestedProps & m_chunks[idx].m_properties));
 				for(uint32 i = 1; i != 0; i<<=1)
 					if(missing & i)
 					{
 						m_chunks[idx].addProperty(Property::Val(i));
-						std::cerr << "    " << propertyString(Property::Val(i)) << '\n';
+						sendMessage(MessageType::WARNING, "    ", propertyString(Property::Val(i)));
 					}
 			}
 	
@@ -333,7 +333,7 @@ namespace bim {
 		std::unique_ptr<byte[]> compressedBuffer = std::make_unique<byte[]>(compressedSize);
 		int r = compress2(compressedBuffer.get(), &compressedSize, reinterpret_cast<const byte*>(_data.data()), (mz_ulong)header.uncompressedSize, 9);
 		if(r != Z_OK) {
-			std::cerr << "Failed to compress a data chunk!\n";
+			sendMessage(MessageType::ERROR, "Failed to compress a data chunk!");
 			return;
 		}
 		header.size = compressedSize;
@@ -345,10 +345,10 @@ namespace bim {
 
 	void BinaryModel::storeChunk(const char* _bimFile, const ei::IVec3& _chunkPos)
 	{
-		if(!isChunkResident(_chunkPos)) {std::cerr << "Chunk is not resident and cannot be stored!\n"; return;}
+		if(!isChunkResident(_chunkPos)) {sendMessage(MessageType::ERROR, "Chunk is not resident and cannot be stored!"); return;}
 		int idx = dot(m_dimScale, _chunkPos);
 		std::ofstream file(_bimFile, std::ios_base::binary | std::ios_base::app);
-		if(m_file.bad()) {std::cerr << "Cannot open file for writing a chunk!\n"; return;}
+		if(m_file.bad()) {sendMessage(MessageType::ERROR, "Cannot open file for writing a chunk!"); return;}
 	
 		SectionHeader header;
 		header.type = CHUNK_SECTION;
@@ -442,7 +442,7 @@ namespace bim {
 		Json json;
 		JsonValue rootNode;
 		if(!json.open(_envFile, rootNode)) {
-			std::cerr << "Opening environment JSON failed!\n";
+			sendMessage(MessageType::ERROR, "Opening environment JSON failed!");
 			return move(binarySceneFile);
 		}
 
@@ -455,13 +455,13 @@ namespace bim {
 					while(json.next(materialNode, materialNode));
 			} else if(strcmp(lvl1Node.getName(), "scene") == 0 && !_ignoreBinary) {
 				if(lvl1Node.getType() != JsonValue::Type::STRING) {
-					std::cerr << "Binary file name is not a valid string!\n";
+					sendMessage(MessageType::ERROR, "Binary file name is not a valid string!");
 					return move(binarySceneFile);
 				} else binarySceneFile = lvl1Node.getString();
 			} else if(strcmp(lvl1Node.getName(), "accelerator") == 0) {
 				if(strcmp(lvl1Node.getString(), "aabox") == 0) m_accelerator = Property::AABOX_BVH;
 				else if(strcmp(lvl1Node.getString(), "obox") == 0) m_accelerator = Property::OBOX_BVH;
-				else std::cerr << "Unknown accelerator in environment file. Only 'aabox' and 'obox' are valid.\n";
+				else sendMessage(MessageType::WARNING, "Unknown accelerator in environment file. Only 'aabox' and 'obox' are valid.");
 			} else if(strcmp(lvl1Node.getName(), "lights") == 0) {
 				JsonValue lightNode;
 				if(json.child(lvl1Node, lightNode))
@@ -561,7 +561,7 @@ namespace bim {
 							scenarios.push_back(v.getString());
 						} while(json.next(v, v));
 					} else {
-						std::cerr << "Error while loading light " << _lightNode.getName() << ": scenarios must be an array of strings!\n";
+						sendMessage(MessageType::ERROR, "Error while loading light ", _lightNode.getName(), ": scenarios must be an array of strings!");
 					}
 				}
 			} while(json.next(lightProp, lightProp));
@@ -591,7 +591,7 @@ namespace bim {
 			m_lights.push_back(std::make_shared<EnvironmentLight>(map, _lightNode.getName()));
 			break;
 		default:
-			std::cerr << "Light " << _lightNode.getName() << " does not have a type!\n";
+			sendMessage(MessageType::ERROR, "Light ", _lightNode.getName(), " does not have a type!");
 			return;
 		}
 
@@ -654,7 +654,7 @@ namespace bim {
 							scenarios.push_back(v.getString());
 						} while(json.next(v, v));
 					} else {
-						std::cerr << "Error while loading camera " << _camNode.getName() << ": scenarios must be an array of strings!\n";
+						sendMessage(MessageType::ERROR, "Error while loading camera ", _camNode.getName(), ": scenarios must be an array of strings!");
 					}
 				} else if(strcmp(camProp.getName(), "velocity") == 0) velocity = camProp.getFloat();
 			} while(json.next(camProp, camProp));
@@ -672,7 +672,7 @@ namespace bim {
 			m_cameras.push_back(std::make_shared<FocusCamera>(position, lookAt, up, focalLength, focusDistance, sensorSize, aperture, _camNode.getName()));
 			break;
 		default:
-			std::cerr << "Camera " << _camNode.getName() << " does not have a type!\n";
+			sendMessage(MessageType::ERROR, "Camera ", _camNode.getName(), " does not have a type!");
 			return;
 		}
 		m_cameras.back()->velocity = velocity;
@@ -718,7 +718,7 @@ namespace bim {
 	{
 		JsonWriter json;
 		if(!json.open(_envFile)) {
-			std::cerr << "Opening environment JSON failed!\n";
+			sendMessage(MessageType::ERROR, "Opening environment JSON failed!");
 			return;
 		}
 		json.beginObject();

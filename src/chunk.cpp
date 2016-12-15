@@ -1,6 +1,6 @@
 #include "bim.hpp"
 #include "hashgrid.hpp"
-#include <iostream>
+#include "error.hpp"
 
 namespace bim {
 
@@ -199,7 +199,7 @@ namespace bim {
 		if(!m_texCoords2.empty()) m_texCoords2.resize(index);
 		if(!m_texCoords3.empty()) m_texCoords3.resize(index);
 		if(!m_colors.empty()) m_colors.resize(index);
-		std::cerr << "INF: remove vertices out/in: " << index << " / " << numVertices << '\n';
+		sendMessage(MessageType::INFO, "remove vertices out/in: ", index, " / ", numVertices);
 
 		// Rebuild index buffer
 		size_t numInvalidTriangles = 0;
@@ -220,7 +220,7 @@ namespace bim {
 		m_triangles.resize(m_triangles.size() - numInvalidTriangles);
 		if(!m_triangleMaterials.empty())
 			m_triangleMaterials.resize(m_triangleMaterials.size() - numInvalidTriangles);
-		std::cerr << "INF: found " << numInvalidTriangles << " invalid triangles after removing redundant vertices.\n";
+		sendMessage(MessageType::INFO, "found ", numInvalidTriangles, " invalid triangles after removing redundant vertices.");
 	}
 
 	void Chunk::buildHierarchy(BuildMethod _method)

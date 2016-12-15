@@ -4,24 +4,24 @@
 #include <assimp/postprocess.h>
 #include <assimp/material.h>
 #include <assimp/Importer.hpp>
-#include <iostream>
 #include <string>
 //#include <algorithm>
 
 #include "bim.hpp"
+#include "error.hpp"
 
 // Assimp logging interfacing
 class LogDebugStream: public Assimp::LogStream {
-	void write(const char* message) override { std::cerr << "ASSIMP DBG: " << message; }
+	void write(const char* message) override { bim::sendMessage(bim::MessageType::INFO, "[ASSIMP DBG] ", message); }
 };
 class LogInfoStream: public Assimp::LogStream {
-	void write(const char* message) override { std::cerr << "ASSIMP INF: " << message; }
+	void write(const char* message) override { bim::sendMessage(bim::MessageType::INFO, "[ASSIMP] ", message); }
 };
 class LogWarnStream: public Assimp::LogStream {
-	void write(const char* message) override { std::cerr << "ASSIMP WAR: " << message; }
+	void write(const char* message) override { bim::sendMessage(bim::MessageType::WARNING, "[ASSIMP] ", message); }
 };
 class LogErrStream: public Assimp::LogStream {
-	void write(const char* message) override { std::cerr << "ASSIMP ERR: " << message; }
+	void write(const char* message) override { bim::sendMessage(bim::MessageType::ERROR, "[ASSIMP] ", message); }
 };
 
 
@@ -79,7 +79,7 @@ void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4
 		_scene->mMaterials[mesh->mMaterialIndex]->Get( AI_MATKEY_NAME, aiName );
 		int mi = _bim.getUniqueMaterialIndex(aiName.C_Str());
 		if(mi >= 0) materialIndex = mi;
-		else std::cerr << "WAR: Could not find the mesh material " << aiName.C_Str() << "!\n";
+		else bim::sendMessage(bim::MessageType::WARNING, "Could not find the mesh material ", aiName.C_Str(), "!");
 
 		// Import and transform the geometry
 		for(uint t = 0; t < mesh->mNumFaces; ++t)
@@ -124,7 +124,7 @@ void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4
 		}
 
 		if(skippedTriangles)
-			std::cerr << "WAR: Skipped " << skippedTriangles << " degenerated triangles in mesh " << _node->mMeshes[i]  << "\n";
+			bim::sendMessage(bim::MessageType::WARNING, "Skipped ", skippedTriangles, " degenerated triangles in mesh ", _node->mMeshes[i]);
 	}
 
 	// Import all child nodes
@@ -136,7 +136,7 @@ void importMaterials(const struct aiScene* _scene, bim::BinaryModel& _bim)
 {
 	if( !_scene->HasMaterials() )
 	{
-		std::cerr << "ERR: The scene has no materials to import!\n";
+		bim::sendMessage(bim::MessageType::ERROR, "The scene has no materials to import!");
 		return;
 	}
 
@@ -238,7 +238,7 @@ int main(int _numArgs, const char** _args)
 	// Parse arguments now
 	for(int i = 1; i < _numArgs; ++i)
 	{
-		if(_args[i][0] != '-') { std::cerr << "WAR: Ignoring input " << _args[i] << '\n'; continue; }
+		if(_args[i][0] != '-') { bim::sendMessage(bim::MessageType::WARNING, "Ignoring input ", _args[i]); continue; }
 		switch(_args[i][1])
 		{
 		case 'i': inputModelFile = _args[i] + 2;
@@ -252,14 +252,14 @@ int main(int _numArgs, const char** _args)
 		case 'c': if(strcmp("SGGX", _args[i] + 2) == 0) computeSGGX = true;
 			break;
 		default:
-			std::cerr << "WAR: Unknown option in argument " << _args[i] << '\n';
+			bim::sendMessage(bim::MessageType::WARNING, "Unknown option in argument ", _args[i]);
 		}
 	}
 
 	// Consistency check of input arguments
-	if(inputModelFile.empty()) { std::cerr << "ERR: Input file must be given!\n"; return 1; }
-	if(!(computeAAB || computeOB)) { std::cerr << "ERR: No BVH type is given!\n"; return 1; }
-	if(chunkGridRes < 1) { std::cerr << "ERR: Invalid grid resolution!\n"; return 1; }
+	if(inputModelFile.empty()) { bim::sendMessage(bim::MessageType::ERROR, "Input file must be given!"); return 1; }
+	if(!(computeAAB || computeOB)) { bim::sendMessage(bim::MessageType::ERROR, "No BVH type is given!"); return 1; }
+	if(chunkGridRes < 1) { bim::sendMessage(bim::MessageType::ERROR, "Invalid grid resolution!"); return 1; }
 
 	// Derive output file name
 	std::string outputBimFile, outputJsonFile;
@@ -272,10 +272,7 @@ int main(int _numArgs, const char** _args)
 
 	// Import Assimp scene
 	Assimp::Importer importer;
-	if(!loadScene(inputModelFile, importer)) { std::cerr << "ERR: Failed to import the scene with assimp."; return 1; }
-	std::cerr << "INF: Finished Assimp loading\n";
-	std::cerr << "    Meshes: " << importer.GetScene()->mNumMeshes << '\n';
-	std::cerr << "    Materials: " << importer.GetScene()->mNumMaterials << '\n';
+	if(!loadScene(inputModelFile, importer)) { bim::sendMessage(bim::MessageType::ERROR, "Failed to import the scene with assimp."); return 1; }
 
 	// Analyze input data to create a proper model
 	bim::Property::Val properties = bim::Property::Val(bim::Property::POSITION | bim::Property::TRIANGLE_IDX | bim::Property::TRIANGLE_MAT);
@@ -296,44 +293,47 @@ int main(int _numArgs, const char** _args)
 		numVertices += mesh->mNumVertices;
 		numTriangles += mesh->mNumFaces;
 	}
-	std::cerr << "    Vertices: " << numVertices << '\n';
-	std::cerr << "    Triangles: " << numTriangles << '\n';
+	bim::sendMessage(bim::MessageType::INFO, "Finished Assimp loading\n",
+		"    Meshes: ", importer.GetScene()->mNumMeshes, '\n',
+		"    Materials: ", importer.GetScene()->mNumMaterials, '\n',
+		"    Vertices: ", numVertices, '\n',
+		"    Triangles: ", numTriangles);
 	bim::BinaryModel model(properties);
 	model.loadEnvironmentFile(outputJsonFile.c_str());
 	// TODO: argument
 	model.setNumTrianglesPerLeaf(2);
 	// Fill the model with data
-	std::cerr << "INF: importing materials...\n";
+	bim::sendMessage(bim::MessageType::INFO, "importing materials...");
 	importMaterials(importer.GetScene(), model);
-	std::cerr << "INF: importing geometry...\n";
+	bim::sendMessage(bim::MessageType::INFO, "importing geometry...");
 	importGeometry(importer.GetScene(), importer.GetScene()->mRootNode, ei::identity4x4(), model);
 	importer.FreeScene();
 	// Compute additional data
-	std::cerr << "INF: recomputing bounding box...\n";
+	bim::sendMessage(bim::MessageType::INFO, "recomputing bounding box...");
 	model.refreshBoundingBox();
 	if(prod(chunkGridRes) > 1)
 	{
-		std::cerr << "INF: dividing into chunks...\n";
+		bim::sendMessage(bim::MessageType::INFO, "dividing into chunks...");
 		model.split(chunkGridRes);
 	}
 	//foreach chunk
 	{
-		std::cerr << "INF: removing redundant vertices...\n";
+		bim::sendMessage(bim::MessageType::INFO, "removing redundant vertices...");
 		model.getChunk(ei::IVec3(0))->removeRedundantVertices();
-		std::cerr << "INF: computing tangent space...\n";
+		bim::sendMessage(bim::MessageType::INFO, "computing tangent space...");
 		model.getChunk(ei::IVec3(0))->computeTangentSpace(bim::Property::Val(bim::Property::NORMAL | bim::Property::TANGENT | bim::Property::BITANGENT), false);
-		std::cerr << "INF: building BVH...\n";
+		bim::sendMessage(bim::MessageType::INFO, "building BVH...");
 		model.getChunk(ei::IVec3(0))->buildHierarchy(method);
 		if(computeAAB) {
-			std::cerr << "INF: computing AABoxes...\n";
+			bim::sendMessage(bim::MessageType::INFO, "computing AABoxes...");
 			model.getChunk(ei::IVec3(0))->computeBVHAABoxes();
 		}
 		if(computeOB) {
-			std::cerr << "INF: computing OBoxes...\n";
+			bim::sendMessage(bim::MessageType::INFO, "computing OBoxes...");
 			model.getChunk(ei::IVec3(0))->computeBVHOBoxes();
 		}
 		if(computeSGGX) {
-			std::cerr << "INF: computing SGGX NDFs...\n";
+			bim::sendMessage(bim::MessageType::INFO, "computing SGGX NDFs...");
 			model.getChunk(ei::IVec3(0))->computeBVHSGGXApproximations();
 		}
 	}
@@ -341,7 +341,7 @@ int main(int _numArgs, const char** _args)
 	if(computeOB) model.setAccelerator(bim::Property::OBOX_BVH);
 	if(computeAAB) model.setAccelerator(bim::Property::AABOX_BVH);
 
-	std::cerr << "INF: storing model...\n";
+	bim::sendMessage(bim::MessageType::INFO, "storing model...");
 	model.storeEnvironmentFile(outputJsonFile.c_str(), outputBimFile.c_str());
 	model.storeBinaryHeader(outputBimFile.c_str());
 	//foreach chunk

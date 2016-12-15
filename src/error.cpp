@@ -7,11 +7,12 @@ namespace bim {
 	{
 		switch(_type)
 		{
-		case MessageType::INFO:    std::cerr << "INF: " << _message.c_str() << '\n'; break;
-		case MessageType::WARNING: std::cerr << "WAR: " << _message.c_str() << '\n'; break;
-		case MessageType::ERROR:   std::cerr << "ERR: " << _message.c_str() << '\n'; break;
-		default: std::cerr << "???: " << _message.c_str() << '\n'; break;
+		case MessageType::INFO:    std::cerr << "INF: " << _message.c_str(); break;
+		case MessageType::WARNING: std::cerr << "WAR: " << _message.c_str(); break;
+		case MessageType::ERROR:   std::cerr << "ERR: " << _message.c_str(); break;
+		default: std::cerr << "???: " << _message.c_str(); break;
 		}
+		if(_message.back() != '\n') std::cerr << '\n';
 	}
 
 	namespace details

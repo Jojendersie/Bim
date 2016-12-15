@@ -282,9 +282,9 @@ namespace bim {
 	// ********************************************************************* //
 	Chunk::FullVertex::FullVertex() :
 		position(0.0f),
-		normal(0.0f, 1.0f, 0.0),
-		tangent(1.0f, 0.0f, 0.0f),
-		bitangent(0.0f, 0.0f, 1.0f),
+		normal(0.0f, 0.0f, 0.0),
+		tangent(0.0f, 0.0f, 0.0f),
+		bitangent(0.0f, 0.0f, 0.0f),
 		qormal(ei::qidentity()),
 		texCoord0(0.0f),
 		texCoord1(0.0f),

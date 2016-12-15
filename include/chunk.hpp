@@ -151,7 +151,10 @@ namespace bim {
 		/// \param [in] _components Flags for the tangent space representations
 		///		which should be computed. NORMAL, TANGENT, BITANGENT and QORMAL are
 		///		valid.
-		void computeTangentSpace(Property::Val _components);
+		/// \param [in] _preserveOriginals Preserves vectors which have a length of
+		///		one. These are assumed to be loaded from the file. Non existing or
+		///		invalid vectors are recomputed.
+		void computeTangentSpace(Property::Val _components, bool _preserveOriginals);
 		/// Change the sign of the normal if winding order is different than expected.
 		/// This does not change the winding order itself. NORMAL and QORMAL are modified.
 		void flipNormals();

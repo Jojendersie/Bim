@@ -5,7 +5,7 @@ using namespace ei;
 
 namespace bim {
 
-	void Chunk::computeTangentSpace(Property::Val _components)
+	void Chunk::computeTangentSpace(Property::Val _components, bool _preserveOriginals)
 	{
 		// Either compute normals only or compute the entire tangent space,
 		// orthonormalize and discard the unwanted.
@@ -26,12 +26,26 @@ namespace bim {
 		}
 
 		// Zero all required ones
-		if(computeNormal) swap(m_normals, std::vector<Vec3>(m_positions.size(), Vec3(0.0f)));
+		if(computeNormal) m_normals.resize(m_positions.size(), Vec3(0.0f));
 		if(needsAll) {
-			swap(m_tangents, std::vector<Vec3>(m_positions.size(), Vec3(0.0f)));
-			swap(m_bitangents, std::vector<Vec3>(m_positions.size(), Vec3(0.0f)));
+			m_tangents.resize(m_positions.size(), Vec3(0.0f));
+			m_bitangents.resize(m_positions.size(), Vec3(0.0f));
 		}
-		if(_components & Property::QORMAL) swap(m_qormals, std::vector<Quaternion>(m_positions.size(), qidentity()));
+		if(_components & Property::QORMAL) m_qormals.resize(m_positions.size(), Vec3(0.0f));
+
+		// Check all vectors if they need to be recomputed.
+		// Store flags 1=normal, 2=tangent, 4=bitangent, 8=qormal as booleans
+		std::vector<uint8_t> isValidVector(m_positions.size(), 0);
+		if(_preserveOriginals)
+		{
+			for(size_t i = 0; i < m_positions.size(); ++i)
+			{
+				if(!m_normals.empty() && approx(len(m_normals[i]), 1.0f)) isValidVector[i] |= 1;
+				if(!m_tangents.empty() && approx(len(m_tangents[i]), 1.0f)) isValidVector[i] |= 2;
+				if(!m_bitangents.empty() && approx(len(m_bitangents[i]), 1.0f)) isValidVector[i] |= 4;
+				if(!m_qormals.empty() && approx(len(m_qormals[i]), 1.0f)) isValidVector[i] |= 8;
+			}
+		}
 
 		// Get tangent spaces on triangles and average them on vertex locations
 		if(computeNormal || useTexCoords)
@@ -74,19 +88,28 @@ namespace bim {
 				float lenE0 = len(e0), lenE1 = len(e1), lenE2 = len(e2);
 				float weight = acos(saturate(dot(e0, e1) / (lenE0 * lenE1)));
 				eiAssert(weight == weight, "weight is NaN");
-				if(computeNormal) m_normals[m_triangles[i].x] += triNormal * weight;
-				if(useTexCoords) m_tangents[m_triangles[i].x] += triTangent * weight;
-				if(useTexCoords) m_bitangents[m_triangles[i].x] += triBitangent * weight;
+				if(computeNormal && !(isValidVector[m_triangles[i].x] & 1))
+					m_normals[m_triangles[i].x] += triNormal * weight;
+				if(useTexCoords && !(isValidVector[m_triangles[i].x] & 2))
+					m_tangents[m_triangles[i].x] += triTangent * weight;
+				if(useTexCoords && !(isValidVector[m_triangles[i].x] & 4))
+					m_bitangents[m_triangles[i].x] += triBitangent * weight;
 				weight = acos(saturate(-dot(e0, e2) / (lenE0 * lenE2)));
 				eiAssert(weight == weight, "weight is NaN");
-				if(computeNormal) m_normals[m_triangles[i].y] += triNormal * weight;
-				if(useTexCoords) m_tangents[m_triangles[i].y] += triTangent * weight;
-				if(useTexCoords) m_bitangents[m_triangles[i].y] += triBitangent * weight;
+				if(computeNormal && !(isValidVector[m_triangles[i].y] & 1))
+					m_normals[m_triangles[i].y] += triNormal * weight;
+				if(useTexCoords && !(isValidVector[m_triangles[i].y] & 2))
+					m_tangents[m_triangles[i].y] += triTangent * weight;
+				if(useTexCoords && !(isValidVector[m_triangles[i].y] & 4))
+					m_bitangents[m_triangles[i].y] += triBitangent * weight;
 				weight = acos(saturate(dot(e1, e2) / (lenE1 * lenE2)));
 				eiAssert(weight == weight, "weight is NaN");
-				if(computeNormal) m_normals[m_triangles[i].z] += triNormal * weight;
-				if(useTexCoords) m_tangents[m_triangles[i].z] += triTangent * weight;
-				if(useTexCoords) m_bitangents[m_triangles[i].z] += triBitangent * weight;
+				if(computeNormal && !(isValidVector[m_triangles[i].z] & 1))
+					m_normals[m_triangles[i].z] += triNormal * weight;
+				if(useTexCoords && !(isValidVector[m_triangles[i].z] & 2))
+					m_tangents[m_triangles[i].z] += triTangent * weight;
+				if(useTexCoords && !(isValidVector[m_triangles[i].z] & 4))
+					m_bitangents[m_triangles[i].z] += triBitangent * weight;
 			}
 		}
 
@@ -116,7 +139,8 @@ namespace bim {
 		// Compute qormals by conversion
 		if(_components & Property::QORMAL)
 			for(size_t i = 0; i < m_normals.size(); ++i)
-				m_qormals[i] = Quaternion(m_normals[i], m_tangents[i], m_bitangents[i]);
+				if(isValidVector[i] & 8)
+					m_qormals[i] = Quaternion(m_normals[i], m_tangents[i], m_bitangents[i]);
 
 		// Discard all the undesired properties for size reasons.
 		if(!(_components & Property::NORMAL) && !(m_properties & Property::NORMAL)) swap(m_normals, std::vector<Vec3>());

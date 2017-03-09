@@ -1,8 +1,8 @@
-#include "bim.hpp"
-#include "json.hpp"
+#include "bim/bim.hpp"
+#include "bim/json.hpp"
 #include "../deps/miniz.c"
 #include "../deps/EnumConverter.h"
-#include "error.hpp"
+#include "bim/log.hpp"
 #include <fstream>
 #include <memory>
 

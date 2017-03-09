@@ -1,5 +1,5 @@
-#include "light.hpp"
-#include "camera.hpp"
+#include "bim/light.hpp"
+#include "bim/camera.hpp"
 
 ENUM_CONVERT(bim::Light, Type, Type::NUM_TYPES,
 	{ bim::Light::Type::POINT, "point" },

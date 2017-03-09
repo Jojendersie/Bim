@@ -1,6 +1,6 @@
-#include "bim.hpp"
-#include "hashgrid.hpp"
-#include "error.hpp"
+#include "bim/bim.hpp"
+#include "bim/hashgrid.hpp"
+#include "bim/log.hpp"
 
 namespace bim {
 

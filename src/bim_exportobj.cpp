@@ -1,4 +1,4 @@
-#include "bim.hpp"
+#include "bim/bim.hpp"
 
 using namespace ei;
 

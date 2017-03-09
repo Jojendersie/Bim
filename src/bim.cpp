@@ -1,5 +1,5 @@
-#include "bim.hpp"
-#include "error.hpp"
+#include "bim/bim.hpp"
+#include "bim/log.hpp"
 
 namespace bim {
 

@@ -1,4 +1,4 @@
-#include "material.hpp"
+#include "bim/material.hpp"
 
 namespace bim {
 

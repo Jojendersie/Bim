@@ -1,5 +1,5 @@
-#include "chunk.hpp"
-#include "error.hpp"
+#include "bim/chunk.hpp"
+#include "bim/log.hpp"
 
 using namespace ei;
 

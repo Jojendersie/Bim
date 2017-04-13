@@ -446,34 +446,39 @@ namespace bim {
 			return move(binarySceneFile);
 		}
 
-		JsonValue lvl1Node;
-		if(json.child(rootNode, lvl1Node)) do {
-			if(strcmp(lvl1Node.getName(), "materials") == 0) {
-				JsonValue materialNode;
-				if(json.child(lvl1Node, materialNode))
-					do { loadMaterial(json, materialNode); }
-					while(json.next(materialNode, materialNode));
-			} else if(strcmp(lvl1Node.getName(), "scene") == 0 && !_ignoreBinary) {
-				if(lvl1Node.getType() != JsonValue::Type::STRING) {
-					sendMessage(MessageType::ERROR, "Binary file name is not a valid string!");
-					return move(binarySceneFile);
-				} else binarySceneFile = lvl1Node.getString();
-			} else if(strcmp(lvl1Node.getName(), "accelerator") == 0) {
-				if(strcmp(lvl1Node.getString(), "aabox") == 0) m_accelerator = Property::AABOX_BVH;
-				else if(strcmp(lvl1Node.getString(), "obox") == 0) m_accelerator = Property::OBOX_BVH;
-				else sendMessage(MessageType::WARNING, "Unknown accelerator in environment file. Only 'aabox' and 'obox' are valid.");
-			} else if(strcmp(lvl1Node.getName(), "lights") == 0) {
-				JsonValue lightNode;
-				if(json.child(lvl1Node, lightNode))
-					do { loadLight(json, lightNode); }
-					while(json.next(lightNode, lightNode));
-			} else if(strcmp(lvl1Node.getName(), "cameras") == 0) {
-				JsonValue camNode;
-				if(json.child(lvl1Node, camNode))
-					do { loadCamera(json, camNode); }
-				while(json.next(camNode, camNode));
-			}
-		} while(json.next(lvl1Node, lvl1Node));
+		try {
+			JsonValue lvl1Node;
+			if(json.child(rootNode, lvl1Node)) do {
+				if(strcmp(lvl1Node.getName(), "materials") == 0) {
+					JsonValue materialNode;
+					if(json.child(lvl1Node, materialNode))
+						do { loadMaterial(json, materialNode); }
+						while(json.next(materialNode, materialNode));
+				} else if(strcmp(lvl1Node.getName(), "scene") == 0 && !_ignoreBinary) {
+					if(lvl1Node.getType() != JsonValue::Type::STRING) {
+						sendMessage(MessageType::ERROR, "Binary file name is not a valid string!");
+						return move(binarySceneFile);
+					} else binarySceneFile = lvl1Node.getString();
+				} else if(strcmp(lvl1Node.getName(), "accelerator") == 0) {
+					if(strcmp(lvl1Node.getString(), "aabox") == 0) m_accelerator = Property::AABOX_BVH;
+					else if(strcmp(lvl1Node.getString(), "obox") == 0) m_accelerator = Property::OBOX_BVH;
+					else sendMessage(MessageType::WARNING, "Unknown accelerator in environment file. Only 'aabox' and 'obox' are valid.");
+				} else if(strcmp(lvl1Node.getName(), "lights") == 0) {
+					JsonValue lightNode;
+					if(json.child(lvl1Node, lightNode))
+						do { loadLight(json, lightNode); }
+						while(json.next(lightNode, lightNode));
+				} else if(strcmp(lvl1Node.getName(), "cameras") == 0) {
+					JsonValue camNode;
+					if(json.child(lvl1Node, camNode))
+						do { loadCamera(json, camNode); }
+					while(json.next(camNode, camNode));
+				}
+			} while(json.next(lvl1Node, lvl1Node));
+		} catch(std::string _message)
+		{
+			sendMessage(MessageType::ERROR, _message.c_str());
+		}
 
 		return move(binarySceneFile);
 	}

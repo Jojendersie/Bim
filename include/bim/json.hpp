@@ -57,6 +57,14 @@ private:
 	bool readProperty(JsonValue& _next);
 	bool readValue(JsonValue& _next);
 	bool readToken();
+
+	void throwError(const char* _message) const
+	{
+		const char* preError = ei::max(m_fileContent.data(), m_tokenPos-16);
+		throw std::string("[JSON] Syntax error: ") + _message
+			+ std::string(preError, m_tokenPos-2) + "@@@"
+			+ std::string(m_tokenPos, m_tokenPos + 16);
+	}
 };
 
 class JsonWriter
@@ -120,9 +128,9 @@ inline bool Json::next(const JsonValue& _current, JsonValue& _next)
 		if(m_tokenPos[0] == '{' || m_tokenPos[0] == '[') ++parenthesis;
 		else if(m_tokenPos[0] == '}' || m_tokenPos[0] == ']') --parenthesis;
 	} while(parenthesis > 0 || m_tokenPos[0] != ',');
-	if(parenthesis < 0) return false;
-	readProperty(_next);
-	return true;
+	if(parenthesis < 0) return false; // Found a ',' before -> current list was opened in the past
+	return readProperty(_next);
+	//return true;
 }
 
 inline bool Json::child(const JsonValue& _current, JsonValue& _next)
@@ -132,14 +140,14 @@ inline bool Json::child(const JsonValue& _current, JsonValue& _next)
 	if(_current.type == JsonValue::Type::ARRAY)
 	{
 		// Next token is '[' otherwise the type would have been wrong
-		if(m_tokenPos[0] != '[') return false;
+		if(m_tokenPos[0] != '[') throwError("Expected '[' at ");
 		// Read array value directly
 		if(!readToken()) return false;
 		return readValue(_next);
 	} else if( _current.type == JsonValue::Type::OBJECT)
 	{
 		// Next token is '{' otherwise the type would have been wrong
-		if(m_tokenPos[0] != '{') return false;
+		if(m_tokenPos[0] != '{') throwError("Expected '{' at ");
 		// Subobject has a property list
 		return readProperty(_next);
 	}
@@ -153,12 +161,12 @@ inline bool Json::readProperty(JsonValue& _next)
 	if(m_tokenPos[0] == '}') return false; // End of object -> there is no further property
 	if(m_tokenPos[0] != '"') return readValue(_next); // Expect to be inside an array.
 	if(!readToken()) return false;
-	if((m_readPos[0] != '"') && (m_readPos[0] != '\0')) return false; // syntax error
+	if((m_readPos[0] != '"') && (m_readPos[0] != '\0')) throwError("Expected '\"' or 0 at ");
 	*m_readPos = '\0'; // Force zero termination (destroys original data, but token parser can handle this).
 	++m_readPos;
 	_next.name = m_tokenPos;
 	if(!readToken()) return false;
-	if(m_tokenPos[0] != ':') return false; // syntax error
+	if(m_tokenPos[0] != ':') throwError("Expected ':' at ");
 	if(!readToken()) return false;
 	return readValue(_next);
 }

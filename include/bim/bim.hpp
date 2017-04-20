@@ -21,7 +21,13 @@ namespace bim {
 	class BinaryModel
 	{
 	public:
-		explicit BinaryModel(Property::Val _properties = Property::Val(Property::POSITION | Property::TRIANGLE_IDX));
+		/// \param [in] _properties A number of attributes which should be defined for this
+		///		model. Some attributes like a tangent space can be added later.
+		///		The default (and required attributes) are POSITION and TRIANGLE_IDX.
+		/// \param [in] _numChunks Build a splitted scene for out of core purposes.
+		///		Each chunk is an independent full renderable scene with BVH, ....
+		///		The subdivision into chunks cannot be changed.
+		explicit BinaryModel(Property::Val _properties = Property::Val(Property::POSITION | Property::TRIANGLE_IDX), const ei::IVec3& _numChunks = ei::IVec3(1));
 		
 		/// Preload the model meta informations.
 		/// To truly load the data call makeChunkResident() for the portions you need.
@@ -44,13 +50,7 @@ namespace bim {
 		void storeBinaryHeader(const char* _bimFile);
 		/// Appends a chunk to the file (expecting the other information already exist).
 		void storeChunk(const char* _bimFile, const ei::IVec3& _chunkPos);
-		
-		/// Split the scene into chunks. This operation cannot be undone.
-		///	It is possible that triangles must be cut resulting in more geometry than
-		///	before. Also, a split can never reduce the number of chunks in any
-		///	direction.
-		void split(const ei::IVec3& _numChunks);
-		
+
 		const ei::IVec3& getNumChunks() const { return m_numChunks; }
 		Chunk* getChunk(const ei::IVec3& _chunkPos) { return &m_chunks[dot(_chunkPos, m_dimScale)]; }
 		

@@ -7,8 +7,8 @@
 #include <string>
 //#include <algorithm>
 
-#include "bim.hpp"
-#include "error.hpp"
+#include "bim/bim.hpp"
+#include "bim/log.hpp"
 
 // Assimp logging interfacing
 class LogDebugStream: public Assimp::LogStream {
@@ -298,7 +298,7 @@ int main(int _numArgs, const char** _args)
 		"    Materials: ", importer.GetScene()->mNumMaterials, '\n',
 		"    Vertices: ", numVertices, '\n',
 		"    Triangles: ", numTriangles);
-	bim::BinaryModel model(properties);
+	bim::BinaryModel model(properties, chunkGridRes);
 	model.loadEnvironmentFile(outputJsonFile.c_str());
 	// TODO: argument
 	model.setNumTrianglesPerLeaf(2);
@@ -311,11 +311,6 @@ int main(int _numArgs, const char** _args)
 	// Compute additional data
 	bim::sendMessage(bim::MessageType::INFO, "recomputing bounding box...");
 	model.refreshBoundingBox();
-	if(prod(chunkGridRes) > 1)
-	{
-		bim::sendMessage(bim::MessageType::INFO, "dividing into chunks...");
-		model.split(chunkGridRes);
-	}
 	//foreach chunk
 	{
 		bim::sendMessage(bim::MessageType::INFO, "removing redundant vertices...");

@@ -70,7 +70,7 @@ namespace bim {
 		// Geometry deviation. Split in this direction.
 		Mat3x3 Q;
 		Vec3 λ;
-		decomposeQl( cov, Q, λ, false );
+		decomposeQl( cov, Q, λ );
 		Vec3 splitDir;
 		eiAssert((λ >= -1e6), "Only positive eigenvalues expected!");
 		if(λ.x > λ.y && λ.x > λ.z) splitDir = transpose(Q(0));

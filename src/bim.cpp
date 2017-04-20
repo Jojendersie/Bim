@@ -3,18 +3,21 @@
 
 namespace bim {
 
-	BinaryModel::BinaryModel(Property::Val _properties) :
-		m_numChunks(1),
-		m_dimScale(1),
-		m_chunkStates(1, ChunkState::LOADED),	// Chunk exists, but is empty (no mesh data)
-		m_chunks(1),
+	BinaryModel::BinaryModel(Property::Val _properties, const ei::IVec3& _numChunks) :
+		m_numChunks(max(_numChunks, ei::IVec3(1))),
+		m_dimScale(1, ei::max(1, _numChunks.x), ei::max(1, _numChunks.x) * ei::max(1, _numChunks.y)),
+		m_chunkStates(prod(max(_numChunks, ei::IVec3(1))), ChunkState::LOADED),	// Chunk exists, but is empty (no mesh data)
+		m_chunks(prod(max(_numChunks, ei::IVec3(1)))),
 		m_requestedProps(Property::Val(_properties | Property::POSITION | Property::TRIANGLE_IDX)),
 		m_accelerator(Property::DONT_CARE),
 		m_loadAll(false),
 		m_numTrianglesPerLeaf(2)
 	{
-		m_chunks[0].m_properties = m_requestedProps;
-		m_chunks[0].m_parent = this;
+		for(int i = 0; i < prod(m_numChunks); ++i)
+		{
+			m_chunks[i].m_properties = m_requestedProps;
+			m_chunks[i].m_parent = this;
+		}
 		m_boundingBox.min = ei::Vec3(1e10f);
 		m_boundingBox.max = ei::Vec3(-1e10f);
 	}
@@ -50,9 +53,6 @@ namespace bim {
 		return -1;
 	}
 
-	void BinaryModel::split(const ei::IVec3& _numChunks)
-	{
-	}
 
 	Scenario * BinaryModel::getScenario(uint _index)
 	{

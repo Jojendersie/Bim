@@ -150,7 +150,7 @@ namespace bim {
 		E.m10 = E.m01; E.m20 = E.m02; E.m21 = E.m12;
 		// Get eigenvectors they are the same as for the SGGX base
 		Mat3x3 Q; Vec3 λ;
-		decomposeQl(E, Q, λ, true);
+		decomposeQl(E, Q, λ);
 
 		// Compute projected areas in the directions of eigenvectors using the same
 		// distribution as before.

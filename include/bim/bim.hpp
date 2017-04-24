@@ -49,6 +49,7 @@ namespace bim {
 		/// This must be called before any chunk is stored.
 		void storeBinaryHeader(const char* _bimFile);
 		/// Appends a chunk to the file (expecting the other information already exist).
+		/// Chunks must be written in grid order (x-fastest/thickly packed, then y, then z).
 		void storeChunk(const char* _bimFile, const ei::IVec3& _chunkPos);
 
 		const ei::IVec3& getNumChunks() const { return m_numChunks; }
@@ -61,6 +62,8 @@ namespace bim {
 		bool isChunkResident(const ei::IVec3& _chunkPos) const;
 		/// Mark a chunk as unused. It might get deleted if memory is required.
 		void realeaseChunk(const ei::IVec3& _chunkPos);
+		/// Definitely remove the chunk from memory.
+		void deleteChunk(const ei::IVec3& _chunkPos);
 
 		/// When editing the model bounding box is not always up to date. Make sure it is.
 		void refreshBoundingBox();

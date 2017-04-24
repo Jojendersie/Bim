@@ -320,6 +320,19 @@ namespace bim {
 		m_chunkStates[idx] = ChunkState::RELEASE_REQUEST;
 	}
 
+	void BinaryModel::deleteChunk(const ei::IVec3 & _chunkPos)
+	{
+		int idx = dot(m_dimScale, _chunkPos);
+		m_chunkStates[idx] = ChunkState::EMPTY;
+		// Create an empty chunk which preserves some of the properties
+		Chunk emptyChunk(this);
+		emptyChunk.m_properties = m_chunks[idx].m_properties;
+		emptyChunk.m_address = m_chunks[idx].m_address;
+		emptyChunk.m_boundingBox = m_chunks[idx].m_boundingBox;
+		// Exchange and let the destructor destroy the data.
+		m_chunks[idx] = emptyChunk;
+	}
+
 
 	template<typename T>
 	static void storeFileChunk(std::ofstream& _file, uint32 _type, const std::vector<T>& _data)

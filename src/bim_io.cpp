@@ -149,7 +149,8 @@ namespace bim {
 		// Validation
 		if(m_chunks.size() != prod(m_numChunks))
 		{
-			sendMessage(MessageType::ERROR, "Missing chunks!");
+			std::string msg = "Invalid number of chunks. Expected " + std::to_string(prod(m_numChunks)) + " found " + std::to_string(m_chunks.size());
+			sendMessage(MessageType::ERROR, msg.c_str());
 			return false;
 		}
 
@@ -360,47 +361,23 @@ namespace bim {
 	{
 		if(!isChunkResident(_chunkPos)) {sendMessage(MessageType::ERROR, "Chunk is not resident and cannot be stored!"); return;}
 		int idx = dot(m_dimScale, _chunkPos);
-		std::ofstream file(_bimFile, std::ios_base::binary | std::ios_base::app);
+		std::ofstream file(_bimFile, std::ios_base::binary | std::ios_base::in | std::ios_base::out);
 		if(m_file.bad()) {sendMessage(MessageType::ERROR, "Cannot open file for writing a chunk!"); return;}
+		// Append at the end..
+		file.seekp(0, std::ios_base::end);
 	
 		SectionHeader header;
 		header.type = CHUNK_SECTION;
-		header.size = m_chunks[idx].m_positions.size() * sizeof(ei::Vec3) +
-					  m_chunks[idx].m_triangles.size() * sizeof(ei::UVec3) +
-					  sizeof(SectionHeader) * 2 + sizeof(ChunkMetaSection);
-		if(m_chunks[idx].m_properties & Property::NORMAL)
-			header.size += m_chunks[idx].m_normals.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::TANGENT)
-			header.size += m_chunks[idx].m_tangents.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::BITANGENT)
-			header.size += m_chunks[idx].m_bitangents.size() * sizeof(ei::Vec3) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::QORMAL)
-			header.size += m_chunks[idx].m_qormals.size() * sizeof(ei::Quaternion) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::TEXCOORD0)
-			header.size += m_chunks[idx].m_texCoords0.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::TEXCOORD1)
-			header.size += m_chunks[idx].m_texCoords1.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::TEXCOORD2)
-			header.size += m_chunks[idx].m_texCoords2.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::TEXCOORD3)
-			header.size += m_chunks[idx].m_texCoords3.size() * sizeof(ei::Vec2) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::COLOR)
-			header.size += m_chunks[idx].m_colors.size() * sizeof(uint32) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::TRIANGLE_MAT)
-			header.size += m_chunks[idx].m_triangleMaterials.size() * sizeof(uint32) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::HIERARCHY)
-			header.size += m_chunks[idx].m_hierarchy.size() * (sizeof(Node) + sizeof(uint32)) + sizeof(SectionHeader) * 2
-							+ m_chunks[idx].m_hierarchyLeaves.size() * sizeof(ei::UVec4);
-		if(m_chunks[idx].m_properties & Property::AABOX_BVH)
-			header.size += m_chunks[idx].m_aaBoxes.size() * sizeof(ei::Box) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::OBOX_BVH)
-			header.size += m_chunks[idx].m_oBoxes.size() * sizeof(ei::OBox) + sizeof(SectionHeader);
-		if(m_chunks[idx].m_properties & Property::NDF_SGGX)
-			header.size += m_chunks[idx].m_nodeNDFs.size() * sizeof(SGGX) + sizeof(SectionHeader);
+		header.size = -1;
+		header.uncompressedSize = -1;
+		// Currently we don't know the final size due to compression.
+		// Store a dummy header first and then go back later.
+		uint64 headerPos = file.tellp();
 		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
 
 		header.type = CHUNK_META_SECTION;
 		header.size = sizeof(ChunkMetaSection);
+		header.uncompressedSize = 0;
 		ChunkMetaSection meta;
 		meta.boundingBox = m_chunks[idx].m_boundingBox;
 		meta.numTrianglesPerLeaf = m_chunks[idx].m_numTrianglesPerLeaf;
@@ -447,6 +424,13 @@ namespace bim {
 			storeFileChunk(file, Property::OBOX_BVH, m_chunks[idx].m_oBoxes);
 		if(m_chunks[idx].m_properties & Property::NDF_SGGX)
 			storeFileChunk(file, Property::NDF_SGGX, m_chunks[idx].m_nodeNDFs);
+
+		// Query the correct size and rewrite the header.
+		header.type = CHUNK_SECTION;
+		header.size = uint64(file.tellp()) - headerPos;
+		header.uncompressedSize = 0;
+		file.seekp(headerPos);
+		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
 	}
 
 	std::string BinaryModel::loadEnv(const char* _envFile, bool _ignoreBinary)

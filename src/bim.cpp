@@ -6,7 +6,7 @@ namespace bim {
 	BinaryModel::BinaryModel(Property::Val _properties, const ei::IVec3& _numChunks) :
 		m_numChunks(max(_numChunks, ei::IVec3(1))),
 		m_dimScale(1, ei::max(1, _numChunks.x), ei::max(1, _numChunks.x) * ei::max(1, _numChunks.y)),
-		m_chunkStates(prod(max(_numChunks, ei::IVec3(1))), ChunkState::LOADED),	// Chunk exists, but is empty (no mesh data)
+		m_chunkStates(prod(max(_numChunks, ei::IVec3(1))), ChunkState::EMPTY),	// Chunk exists, but is empty (no mesh data)
 		m_chunks(prod(max(_numChunks, ei::IVec3(1)))),
 		m_requestedProps(Property::Val(_properties | Property::POSITION | Property::TRIANGLE_IDX)),
 		m_accelerator(Property::DONT_CARE),

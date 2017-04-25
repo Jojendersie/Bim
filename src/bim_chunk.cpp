@@ -8,6 +8,7 @@ namespace bim {
 		m_parent(_parent),
 		m_address(0),
 		m_properties(Property::DONT_CARE),
+		m_boundingBox(ei::Vec3(0.0f), ei::Vec3(0.0f)),
 		m_numTrianglesPerLeaf(0),
 		m_numTreeLevels(0)
 	{

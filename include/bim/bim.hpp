@@ -21,6 +21,9 @@ namespace bim {
 	class BinaryModel
 	{
 	public:
+		/// Create an empty model.
+		/// All chunks count as empty at the beginning. They must be made resident
+		/// before any use (write or load).
 		/// \param [in] _properties A number of attributes which should be defined for this
 		///		model. Some attributes like a tangent space can be added later.
 		///		The default (and required attributes) are POSITION and TRIANGLE_IDX.
@@ -80,6 +83,9 @@ namespace bim {
 		const Material* getMaterial(const std::string& _name) const { auto it = m_materials.find(_name); if(it != m_materials.end()) return &it->second; else return nullptr; }
 
 		const ei::Box& getBoundingBox() const { return m_boundingBox; }
+		/// Allows an external update of the bounding box for out of core building purposes.
+		/// (Bounding box must be known in advance).
+		void setBoundingBox(const ei::Box& _box) { m_boundingBox = _box; }
 		/// Global parameter for the chunk->buildHierarchy().
 		void setNumTrianglesPerLeaf(uint _numTrianglesPerLeaf) { m_numTrianglesPerLeaf = m_numTrianglesPerLeaf; }
 		uint getNumTrianglesPerLeaf() const { return m_numTrianglesPerLeaf; }

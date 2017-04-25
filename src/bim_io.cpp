@@ -241,6 +241,9 @@ namespace bim {
 		// Is it still there?
 		if(m_chunkStates[idx] == ChunkState::RELEASE_REQUEST)
 			m_chunkStates[idx] = ChunkState::LOADED;
+		// New chunk?
+		if(m_chunkStates[idx] == ChunkState::EMPTY && m_chunks[idx].m_address == 0)
+			m_chunkStates[idx] = ChunkState::LOADED;
 		// Not in memory?
 		if(m_chunkStates[idx] != ChunkState::LOADED)
 		{

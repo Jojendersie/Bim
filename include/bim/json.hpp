@@ -57,6 +57,7 @@ private:
 	bool readProperty(JsonValue& _next);
 	bool readValue(JsonValue& _next);
 	bool readToken();
+	bool readString();
 
 	void throwError(const char* _message) const
 	{
@@ -156,11 +157,12 @@ inline bool Json::child(const JsonValue& _current, JsonValue& _next)
 
 inline bool Json::readProperty(JsonValue& _next)
 {
-	// Read "name": ...
+	// Read "name": ... or } or next value in an array
 	if(!readToken()) return false;
 	if(m_tokenPos[0] == '}') return false; // End of object -> there is no further property
 	if(m_tokenPos[0] != '"') return readValue(_next); // Expect to be inside an array.
-	if(!readToken()) return false;
+	// Ok the token was " -> read name now
+	if(!readString()) return false;
 	if((m_readPos[0] != '"') && (m_readPos[0] != '\0')) throwError("Expected '\"' or 0 at ");
 	*m_readPos = '\0'; // Force zero termination (destroys original data, but token parser can handle this).
 	++m_readPos;
@@ -179,7 +181,7 @@ inline bool Json::readValue(JsonValue& _next)
 	{
 	case 't': _next.type = JsonValue::Type::BOOL; _next._bool = true; break;
 	case 'b': _next.type = JsonValue::Type::BOOL; _next._bool = false; break;
-	case '"': _next.type = JsonValue::Type::STRING; if(!readToken()) return false; m_readPos[*m_tokenPos == '"' ? -1 : 0] = '\0'; _next._string = m_tokenPos; break;
+	case '"': _next.type = JsonValue::Type::STRING; if(!readString()) return false; m_readPos[0] = '\0'; _next._string = m_tokenPos; break;
 	case '[': _next.type = JsonValue::Type::ARRAY; break;
 	case '{': _next.type = JsonValue::Type::OBJECT; break;
 	default: {
@@ -218,6 +220,19 @@ inline bool Json::readToken()
 	// If the token is a printable separator its length is 0 here
 	if(m_readPos == m_tokenPos)
 		++m_readPos;
+	return true;
+}
+
+inline bool Json::readString()
+{
+	// Expect to be at the first character of a string (already read ")
+	if(m_readPos == &m_fileContent.back()) throwError("Unexpected end of file at ");
+	m_tokenPos = m_readPos;
+	while(m_readPos[0] != '"' || m_readPos[-1] == '\\') // Skip escaped \"
+	{
+		++m_readPos;
+		if(m_readPos == &m_fileContent.back()) throwError("Unexpected end of file at ");
+	}
 	return true;
 }
 

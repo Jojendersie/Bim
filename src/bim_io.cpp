@@ -430,7 +430,7 @@ namespace bim {
 
 		// Query the correct size and rewrite the header.
 		header.type = CHUNK_SECTION;
-		header.size = uint64(file.tellp()) - headerPos;
+		header.size = uint64(file.tellp()) - headerPos - sizeof(SectionHeader);
 		header.uncompressedSize = 0;
 		file.seekp(headerPos);
 		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));

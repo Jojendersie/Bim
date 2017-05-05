@@ -29,27 +29,45 @@ namespace bim {
 		return _default;
 	}
 
-	const ei::Vec2 & Material::get(const std::string & _name, const ei::Vec2 & _default) const
+	ei::Vec2 Material::get(const std::string & _name, const ei::Vec2 & _default) const
 	{
 		auto it = m_values.find(_name);
 		if(it != m_values.end())
-			return *reinterpret_cast<const ei::Vec2*>(&it->second.values);
+		{
+			ei::Vec2 res(it->second.values);
+			// Fill missing components with the default.
+			for(int i = it->second.numComponents; i < 2; ++i)
+				res[i] = _default[i];
+			return res;
+		}
 		return _default;
 	}
 
-	const ei::Vec3 & Material::get(const std::string & _name, const ei::Vec3 & _default) const
+	ei::Vec3 Material::get(const std::string & _name, const ei::Vec3 & _default) const
 	{
 		auto it = m_values.find(_name);
 		if(it != m_values.end())
-			return *reinterpret_cast<const ei::Vec3*>(&it->second.values);
+		{
+			ei::Vec3 res(it->second.values);
+			// Fill missing components with the default.
+			for(int i = it->second.numComponents; i < 3; ++i)
+				res[i] = _default[i];
+			return res;
+		}
 		return _default;
 	}
 
-	const ei::Vec4 & Material::get(const std::string & _name, const ei::Vec4 & _default) const
+	ei::Vec4 Material::get(const std::string & _name, const ei::Vec4 & _default) const
 	{
 		auto it = m_values.find(_name);
 		if(it != m_values.end())
-			return it->second.values;
+		{
+			ei::Vec4 res = it->second.values;
+			// Fill missing components with the default.
+			for(int i = it->second.numComponents; i < 4; ++i)
+				res[i] = _default[i];
+			return res;
+		}
 		return _default;
 	}
 

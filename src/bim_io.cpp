@@ -534,6 +534,7 @@ namespace bim {
 		float halfAngle = 0.7f;
 		float turbidity = 2.0f;
 		bool aerialPerspective = false;
+		bool hasExplicitScenarios = false;
 		std::string map;
 		std::vector<const char*> scenarios;
 
@@ -558,6 +559,7 @@ namespace bim {
 				else if(strcmp(lightProp.getName(), "radianceMap") == 0) map = lightProp.getString();
 				else if(strcmp(lightProp.getName(), "scenario") == 0) 
 				{
+					hasExplicitScenarios = true;
 					if(lightProp.getType() == JsonValue::Type::ARRAY)
 					{
 						JsonValue v;
@@ -600,7 +602,11 @@ namespace bim {
 			return;
 		}
 
-		for(auto sname : scenarios)
+		// Always add to the default scenario if nothing was specified
+		if(!hasExplicitScenarios)
+			scenarios.push_back("default");
+
+		for(const auto& sname : scenarios)
 		{
 			Scenario* scenario = getScenario(sname);
 			if(!scenario)
@@ -628,6 +634,7 @@ namespace bim {
 		float sensorSize = 24.0f;
 		float aperture = 1.0f;
 		float velocity = 1.0f;
+		bool hasExplicitScenarios = false;
 		std::vector<const char*> scenarios;
 
 		JsonValue camProp;
@@ -651,6 +658,7 @@ namespace bim {
 				else if(strcmp(camProp.getName(), "aperture") == 0) aperture = camProp.getFloat();
 				else if(strcmp(camProp.getName(), "scenario") == 0) 
 				{
+					hasExplicitScenarios = true;
 					if(camProp.getType() == JsonValue::Type::ARRAY)
 					{
 						JsonValue v;
@@ -681,6 +689,10 @@ namespace bim {
 			return;
 		}
 		m_cameras.back()->velocity = velocity;
+
+		// Always add to the default scenario if nothing was specified
+		if(!hasExplicitScenarios)
+			scenarios.push_back("default");
 
 		for(auto scenarioName : scenarios)
 		{

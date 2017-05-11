@@ -1,5 +1,5 @@
 #include "bim/bim.hpp"
-#include "bim/json.hpp"
+#include "../deps/json/json.hpp"
 #include "../deps/miniz.c"
 #include "../deps/EnumConverter.h"
 #include "bim/log.hpp"
@@ -484,13 +484,13 @@ namespace bim {
 		return move(binarySceneFile);
 	}
 
-	void BinaryModel::loadMaterial(nlohmann::json _node, const std::string& _name)
+	void BinaryModel::loadMaterial(const nlohmann::json& _node, const std::string& _name)
 	{
 		Material mat;
 		mat.m_name = _name;
 		// A material contains a list of strings or float (arrays).
 		//for(nlohmann::json::iterator it : _node)
-		for(nlohmann::json::iterator it = _node.begin(); it != _node.end(); ++it)
+		for(nlohmann::json::const_iterator it = _node.begin(); it != _node.end(); ++it)
 		{
 			if(it->is_string()) {
 				if(strcmp(it.key().c_str(), "type") == 0)
@@ -513,7 +513,7 @@ namespace bim {
 		m_materials.emplace(mat.getName(), mat);
 	}
 
-	static ei::Vec3 readVec3(nlohmann::json _node)
+	static ei::Vec3 readVec3(const nlohmann::json& _node)
 	{
 		ei::Vec3 value(0.0f);
 		// Fallback to zero if something goes wrong
@@ -523,7 +523,7 @@ namespace bim {
 		return value;
 	}
 
-	void BinaryModel::loadLight(nlohmann::json _node, const std::string& _name)
+	void BinaryModel::loadLight(const nlohmann::json& _node, const std::string& _name)
 	{
 		// Default values for all possible light properties (some are not
 		// used dependent on the final type).
@@ -607,7 +607,7 @@ namespace bim {
 		}
 	}
 
-	void BinaryModel::loadCamera(nlohmann::json _node, const std::string& _name)
+	void BinaryModel::loadCamera(const nlohmann::json& _node, const std::string& _name)
 	{
 		// Default values
 		Camera::Type type = Camera::Type::NUM_TYPES;
@@ -737,10 +737,10 @@ namespace bim {
 				json["accelerator"] = "obox";
 		}
 
-		nlohmann::json materialsNode = json["materials"];
+		nlohmann::json& materialsNode = json["materials"];
 		for(auto& mat : m_materials)
 		{
-			nlohmann::json matNode = materialsNode[mat.second.getName()];
+			nlohmann::json& matNode = materialsNode[mat.second.getName()];
 			matNode["type"] = mat.second.getType();
 			for(auto& tex : mat.second.m_textureNames)
 				matNode[tex.first] = tex.second;
@@ -752,10 +752,10 @@ namespace bim {
 			}
 		}
 
-		nlohmann::json lightsNode = json["lights"];
+		nlohmann::json& lightsNode = json["lights"];
 		for(auto& light : m_lights)
 		{
-			nlohmann::json lightNode = materialsNode[light->name];
+			nlohmann::json& lightNode = materialsNode[light->name];
 			lightNode["type"] = Light::TypeToString(light->type);
 			switch(light->type)
 			{
@@ -806,10 +806,10 @@ namespace bim {
 				scenariosNode.push_back(sc.getName());
 		}
 
-		nlohmann::json camerasNode = json["cameras"];
+		nlohmann::json& camerasNode = json["cameras"];
 		for(auto& cam : m_cameras)
 		{
-			nlohmann::json camNode = materialsNode[cam->name];
+			nlohmann::json& camNode = materialsNode[cam->name];
 			camNode["type"] = Camera::TypeToString(cam->type);
 			switch(cam->type)
 			{
@@ -849,6 +849,7 @@ namespace bim {
 				scenariosNode.push_back(sc.getName());
 		}
 
-		envFile << json;
+		// pretty print with indent of 4 spaces
+		envFile << std::setw(4) << json;
 	}
 }

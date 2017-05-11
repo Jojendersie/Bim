@@ -111,9 +111,9 @@ namespace bim {
 		void addLight(std::shared_ptr<Light> _light);
 	private:
 		std::string loadEnv(const char* _envFile, bool _ignoreBinary);
-		void loadMaterial(nlohmann::json _node, const std::string& _name);
-		void loadLight(nlohmann::json _node, const std::string& _name);
-		void loadCamera(nlohmann::json _node, const std::string& _name);
+		void loadMaterial(const nlohmann::json& _node, const std::string& _name);
+		void loadLight(const nlohmann::json& _node, const std::string& _name);
+		void loadCamera(const nlohmann::json& _node, const std::string& _name);
 
 		enum class ChunkState {
 			LOADED,

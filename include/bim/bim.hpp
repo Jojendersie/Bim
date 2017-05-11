@@ -4,11 +4,9 @@
 #include "material.hpp"
 #include "scenario.hpp"
 #include "camera.hpp"
+#include "../deps/json/json_fwd.hpp"
 #include <fstream>
 #include <ei/3dtypes.hpp>
-
-class Json;
-struct JsonValue;
 
 namespace bim {
 
@@ -113,9 +111,9 @@ namespace bim {
 		void addLight(std::shared_ptr<Light> _light);
 	private:
 		std::string loadEnv(const char* _envFile, bool _ignoreBinary);
-		void loadMaterial(Json & json, const JsonValue & _matNode);
-		void loadLight(Json & json, const JsonValue & _lightNode);
-		void loadCamera(Json & json, const JsonValue & _camNode);
+		void loadMaterial(nlohmann::json _node, const std::string& _name);
+		void loadLight(nlohmann::json _node, const std::string& _name);
+		void loadCamera(nlohmann::json _node, const std::string& _name);
 
 		enum class ChunkState {
 			LOADED,

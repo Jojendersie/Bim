@@ -23,11 +23,11 @@ namespace bim {
 		};
 		ENUM_CONVERT_FUNC(Type)
 
-		explicit Light(Type _type, const char* _name = nullptr) :
+		explicit Light(Type _type, std::string _name = "") :
 			type(_type)
 		{
 			static int s_genericLightName = 0;
-			if(_name) name = _name;
+			if(!_name.empty()) name = move(_name);
 			else name = s_genericLightName++;
 		}
 		virtual ~Light() = default;
@@ -39,12 +39,12 @@ namespace bim {
 	class PointLight : public Light
 	{
 	public:
-		explicit PointLight(const char* _name = nullptr) :
-			Light(Type::POINT, _name)
+		explicit PointLight(std::string _name = "") :
+			Light(Type::POINT, move(_name))
 		{}
 
-		PointLight(const ei::Vec3& _position, const ei::Vec3& _intensity, const char* _name = nullptr) :
-			Light(Type::POINT, _name),
+		PointLight(const ei::Vec3& _position, const ei::Vec3& _intensity, std::string _name = "") :
+			Light(Type::POINT, move(_name)),
 			position(_position),
 			intensity(_intensity)
 		{}
@@ -56,12 +56,12 @@ namespace bim {
 	class LambertLight : public Light
 	{
 	public:
-		explicit LambertLight(const char* _name = nullptr) :
-			Light(Type::LAMBERT, _name)
+		explicit LambertLight(std::string _name = "") :
+			Light(Type::LAMBERT, move(_name))
 		{}
 
-		LambertLight(const ei::Vec3& _position, const ei::Vec3& _normal, const ei::Vec3& _intensity, const char* _name = nullptr) :
-			Light(Type::LAMBERT, _name),
+		LambertLight(const ei::Vec3& _position, const ei::Vec3& _normal, const ei::Vec3& _intensity, std::string _name = "") :
+			Light(Type::LAMBERT, move(_name)),
 			position(_position),
 			normal(_normal),
 			intensity(_intensity)
@@ -75,12 +75,12 @@ namespace bim {
 	class DirectionalLight : public Light
 	{
 	public:
-		explicit DirectionalLight(const char* _name = nullptr) :
-			Light(Type::DIRECTIONAL, _name)
+		explicit DirectionalLight(std::string _name = "") :
+			Light(Type::DIRECTIONAL, move(_name))
 		{}
 
-		DirectionalLight(const ei::Vec3& _direction, const ei::Vec3& _irradiance, const char* _name = nullptr) :
-			Light(Type::DIRECTIONAL, _name),
+		DirectionalLight(const ei::Vec3& _direction, const ei::Vec3& _irradiance, std::string _name = "") :
+			Light(Type::DIRECTIONAL, move(_name)),
 			direction(_direction),
 			irradiance(_irradiance)
 		{}
@@ -95,12 +95,12 @@ namespace bim {
 	class SpotLight : public Light
 	{
 	public:
-		explicit SpotLight(const char* _name = nullptr) :
-			Light(Type::SPOT, _name)
+		explicit SpotLight(std::string _name = "") :
+			Light(Type::SPOT, move(_name))
 		{}
 
-		SpotLight(const ei::Vec3& _position, const ei::Vec3& _direction, const ei::Vec3& _intensity, float _falloff, float _halfAngle, const char* _name = nullptr) :
-			Light(Type::SPOT, _name),
+		SpotLight(const ei::Vec3& _position, const ei::Vec3& _direction, const ei::Vec3& _intensity, float _falloff, float _halfAngle, std::string _name = "") :
+			Light(Type::SPOT, move(_name)),
 			position(_position),
 			direction(_direction),
 			peakIntensity(_intensity),
@@ -119,12 +119,12 @@ namespace bim {
 	class SkyLight : public Light
 	{
 	public:
-		explicit SkyLight(const char* _name = nullptr) :
-			Light(Type::SPOT, _name)
+		explicit SkyLight(std::string _name = "") :
+			Light(Type::SPOT, move(_name))
 		{}
 
-		SkyLight(const ei::Vec3& _sunDirection, float _turbidity, bool _aerialPerspective, const char* _name = nullptr) :
-			Light(Type::SPOT, _name),
+		SkyLight(const ei::Vec3& _sunDirection, float _turbidity, bool _aerialPerspective, std::string _name = "") :
+			Light(Type::SPOT, move(_name)),
 			sunDirection(_sunDirection),
 			turbidity(_turbidity),
 			aerialPerspective(_aerialPerspective)
@@ -138,11 +138,11 @@ namespace bim {
 	class GoniometricLight : public Light
 	{
 	public:
-		explicit GoniometricLight(const char* _name = nullptr) :
-			Light(Type::GONIOMETRIC, _name)
+		explicit GoniometricLight(std::string _name = "") :
+			Light(Type::GONIOMETRIC, move(_name))
 		{}
 
-		GoniometricLight(const ei::Vec3& _position, const ei::Vec3& _intensityScale, const std::string& _intensityMap, const char* _name = nullptr) :
+		GoniometricLight(const ei::Vec3& _position, const ei::Vec3& _intensityScale, const std::string& _intensityMap, std::string _name = "") :
 			Light(Type::GONIOMETRIC, _name),
 			position(_position),
 			intensityScale(_intensityScale),
@@ -157,12 +157,12 @@ namespace bim {
 	class EnvironmentLight : public Light
 	{
 	public:
-		explicit EnvironmentLight(const char* _name = nullptr) :
-			Light(Type::ENVIRONMENT, _name)
+		explicit EnvironmentLight(std::string _name = "") :
+			Light(Type::ENVIRONMENT, move(_name))
 		{}
 
-		explicit EnvironmentLight(const std::string& _radianceMap, const char* _name = nullptr) :
-			Light(Type::ENVIRONMENT, _name),
+		explicit EnvironmentLight(const std::string& _radianceMap, std::string _name = "") :
+			Light(Type::ENVIRONMENT, move(_name)),
 			radianceMap(_radianceMap)
 		{}
 

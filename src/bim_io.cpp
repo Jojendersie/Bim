@@ -439,90 +439,91 @@ namespace bim {
 	std::string BinaryModel::loadEnv(const char* _envFile, bool _ignoreBinary)
 	{
 		std::string binarySceneFile;
-		Json json;
-		JsonValue rootNode;
-		if(!json.open(_envFile, rootNode)) {
+		std::ifstream envFile(_envFile);
+		if(!envFile) {
 			sendMessage(MessageType::ERROR, "Opening environment JSON failed!");
 			return move(binarySceneFile);
 		}
-
+		nlohmann::json jsonRoot;
 		try {
-			JsonValue lvl1Node;
-			if(json.child(rootNode, lvl1Node)) do {
-				if(strcmp(lvl1Node.getName(), "materials") == 0) {
-					JsonValue materialNode;
-					if(json.child(lvl1Node, materialNode))
-						do { loadMaterial(json, materialNode); }
-						while(json.next(materialNode, materialNode));
-				} else if(strcmp(lvl1Node.getName(), "scene") == 0 && !_ignoreBinary) {
-					if(lvl1Node.getType() != JsonValue::Type::STRING) {
-						sendMessage(MessageType::ERROR, "Binary file name is not a valid string!");
-						return move(binarySceneFile);
-					} else binarySceneFile = lvl1Node.getString();
-				} else if(strcmp(lvl1Node.getName(), "accelerator") == 0) {
-					if(strcmp(lvl1Node.getString(), "aabox") == 0) m_accelerator = Property::AABOX_BVH;
-					else if(strcmp(lvl1Node.getString(), "obox") == 0) m_accelerator = Property::OBOX_BVH;
-					else sendMessage(MessageType::WARNING, "Unknown accelerator in environment file. Only 'aabox' and 'obox' are valid.");
-				} else if(strcmp(lvl1Node.getName(), "lights") == 0) {
-					JsonValue lightNode;
-					if(json.child(lvl1Node, lightNode))
-						do { loadLight(json, lightNode); }
-						while(json.next(lightNode, lightNode));
-				} else if(strcmp(lvl1Node.getName(), "cameras") == 0) {
-					JsonValue camNode;
-					if(json.child(lvl1Node, camNode))
-						do { loadCamera(json, camNode); }
-					while(json.next(camNode, camNode));
-				}
-			} while(json.next(lvl1Node, lvl1Node));
-		} catch(std::string _message)
-		{
-			sendMessage(MessageType::ERROR, _message.c_str());
+			envFile >> jsonRoot;
+
+			auto it = jsonRoot.find("materials");
+			if(it != jsonRoot.end())
+			{
+				for(nlohmann::json::iterator itm = it->begin(); itm != it->end(); ++itm)
+					loadMaterial(itm.value(), itm.key());
+			} else sendMessage(MessageType::ERROR, "Cannot find 'materials' section in the scene file!");
+
+			if((it = jsonRoot.find("scene")) != jsonRoot.end())
+				binarySceneFile = it.value();
+			else sendMessage(MessageType::ERROR, "Cannot find 'scene' binary file name!");
+
+			if((it = jsonRoot.find("accelerator")) != jsonRoot.end())
+			{
+				const std::string& str = *it;
+				if(strcmp(str.c_str(), "aabox") == 0) m_accelerator = Property::AABOX_BVH;
+				else if(strcmp(str.c_str(), "obox") == 0) m_accelerator = Property::OBOX_BVH;
+				else sendMessage(MessageType::WARNING, "Unknown accelerator in environment file. Only 'aabox' and 'obox' are valid.");
+			}
+
+			if((it = jsonRoot.find("lights")) != jsonRoot.end())
+			{
+				for(nlohmann::json::iterator itl = it->begin(); itl != it->end(); ++itl)
+					loadLight(itl.value(), itl.key());
+			} // No lights is OK - scene may contain emissive surfaces.
+
+			if((it = jsonRoot.find("cameras")) != jsonRoot.end())
+				for(nlohmann::json::iterator itc = it->begin(); itc != it->end(); ++itc)
+					loadCamera(itc.value(), itc.key());
+			else sendMessage(MessageType::ERROR, "Cannot find 'cameras' section in the scene file!");
+		} catch(std::exception _e) {
+			sendMessage(MessageType::ERROR, _e.what());
 		}
 
 		return move(binarySceneFile);
 	}
 
-	void BinaryModel::loadMaterial(Json & json, const JsonValue & _matNode)
+	void BinaryModel::loadMaterial(nlohmann::json _node, const std::string& _name)
 	{
 		Material mat;
-		mat.m_name = _matNode.getName();
-		JsonValue matProp;
-		if(json.child(_matNode, matProp))
-			// A material contains a list of strings or float (arrays).
-			do {
-				if(matProp.getType() == JsonValue::Type::STRING) {
-					if(strcmp(matProp.getName(), "type") == 0)
-						mat.setType(matProp.getString());
-					else
-						mat.m_textureNames.emplace(matProp.getName(), matProp.getString());
-				} else if(matProp.getType() == JsonValue::Type::ARRAY)
+		mat.m_name = _name;
+		// A material contains a list of strings or float (arrays).
+		//for(nlohmann::json::iterator it : _node)
+		for(nlohmann::json::iterator it = _node.begin(); it != _node.end(); ++it)
+		{
+			if(it->is_string()) {
+				if(strcmp(it.key().c_str(), "type") == 0)
+					mat.setType(*it);
+				else
+					mat.m_textureNames.emplace(it.key(), it.value());
+			} else if(it->is_array())
+			{
+				// Assume a float vector
+				Material::MultiValue value{ei::Vec4(0.0f), 0};
+				for(int i = 0; i < ei::min(4, int(it->size())); ++i)
 				{
-					// Assume a float vector
-					Material::MultiValue value{ei::Vec4(0.0f), 1};
-					JsonValue v; json.child(matProp, v);
-					value.values[0] = v.getFloat();
-					if(json.next(v, v)) {value.values[1] = v.getFloat(); value.numComponents = 2;}
-					if(json.next(v, v)) {value.values[2] = v.getFloat(); value.numComponents = 3;}
-					if(json.next(v, v)) {value.values[3] = v.getFloat(); value.numComponents = 4;}
-					mat.m_values.emplace(matProp.getName(), value);
-				} else
-					mat.m_values.emplace(matProp.getName(), Material::MultiValue{ei::Vec4(matProp.getFloat(), 0.0f, 0.0f, 0.0f), 1});
-			} while(json.next(matProp, matProp));
+					value.values[i] = it.value()[i];
+					value.numComponents++;
+				}
+				mat.m_values.emplace(it.key(), value);
+			} else
+				mat.m_values.emplace(it.key(), Material::MultiValue{ei::Vec4(*it, 0.0f, 0.0f, 0.0f), 1});
+		}
 		m_materials.emplace(mat.getName(), mat);
 	}
 
-	static ei::Vec3 readVec3(Json & json, const JsonValue & _lightProp)
+	static ei::Vec3 readVec3(nlohmann::json _node)
 	{
 		ei::Vec3 value(0.0f);
-		JsonValue v;
-		if(json.child(_lightProp, v)) value.x = v.getFloat();
-		if(json.next(v, v)) value.y = v.getFloat();
-		if(json.next(v, v)) value.z = v.getFloat();
+		// Fallback to zero if something goes wrong
+		try { value.x = _node[0]; } catch(...) {}
+		try { value.y = _node[1]; } catch(...) {}
+		try { value.z = _node[2]; } catch(...) {}
 		return value;
 	}
 
-	void BinaryModel::loadLight(Json & json, const JsonValue & _lightNode)
+	void BinaryModel::loadLight(nlohmann::json _node, const std::string& _name)
 	{
 		// Default values for all possible light properties (some are not
 		// used dependent on the final type).
@@ -536,69 +537,60 @@ namespace bim {
 		bool aerialPerspective = false;
 		bool hasExplicitScenarios = false;
 		std::string map;
-		std::vector<const char*> scenarios;
+		std::vector<std::string> scenarios;
 
-		JsonValue lightProp;
-		if(json.child(_lightNode, lightProp))
+		auto it = _node.find("type");
+		if(it != _node.end())
 		{
-			do {
-				if(strcmp(lightProp.getName(), "type") == 0) type = Light::TypeFromString(lightProp.getString());
-				else if(strcmp(lightProp.getName(), "position") == 0) position = readVec3(json, lightProp);
-				else if(strcmp(lightProp.getName(), "intensity") == 0) intensity = readVec3(json, lightProp);
-				else if(strcmp(lightProp.getName(), "normal") == 0) normal = readVec3(json, lightProp);
-				else if(strcmp(lightProp.getName(), "direction") == 0) normal = readVec3(json, lightProp);
-				else if(strcmp(lightProp.getName(), "irradiance") == 0) intensity = readVec3(json, lightProp);
-				else if(strcmp(lightProp.getName(), "peakIntensity") == 0) intensity = readVec3(json, lightProp);
-				else if(strcmp(lightProp.getName(), "falloff") == 0) falloff = lightProp.getFloat();
-				else if(strcmp(lightProp.getName(), "halfAngle") == 0) halfAngle = lightProp.getFloat();
-				else if(strcmp(lightProp.getName(), "sunDirection") == 0) normal = readVec3(json, lightProp);
-				else if(strcmp(lightProp.getName(), "turbidity") == 0) turbidity = lightProp.getFloat();
-				else if(strcmp(lightProp.getName(), "aerialPerspective") == 0) aerialPerspective = lightProp.getBool();
-				else if(strcmp(lightProp.getName(), "intensityMap") == 0) map = lightProp.getString();
-				else if(strcmp(lightProp.getName(), "intensityScale") == 0) intensity = readVec3(json, lightProp);
-				else if(strcmp(lightProp.getName(), "radianceMap") == 0) map = lightProp.getString();
-				else if(strcmp(lightProp.getName(), "scenario") == 0) 
-				{
-					hasExplicitScenarios = true;
-					if(lightProp.getType() == JsonValue::Type::ARRAY)
-					{
-						JsonValue v;
-						json.child(lightProp, v);
-						do {
-							scenarios.push_back(v.getString());
-						} while(json.next(v, v));
-					} else {
-						sendMessage(MessageType::ERROR, "Error while loading light ", _lightNode.getName(), ": scenarios must be an array of strings!");
-					}
-				}
-			} while(json.next(lightProp, lightProp));
+			type = Light::TypeFromString(*it);
+		} else sendMessage(MessageType::ERROR, "No type given for light source ", _name);
+
+		if((it = _node.find("position")) != _node.end()) position = readVec3(*it);
+		if((it = _node.find("intensity")) != _node.end()) intensity = readVec3(*it);
+		if((it = _node.find("normal")) != _node.end()) normal = readVec3(*it);
+		if((it = _node.find("direction")) != _node.end()) normal = readVec3(*it);
+		if((it = _node.find("irradiance")) != _node.end()) intensity = readVec3(*it);
+		if((it = _node.find("peakIntensity")) != _node.end()) intensity = readVec3(*it);
+		if((it = _node.find("falloff")) != _node.end()) falloff = *it;
+		if((it = _node.find("halfAngle")) != _node.end()) halfAngle =  *it;
+		if((it = _node.find("sunDirection")) != _node.end()) normal = readVec3(*it);
+		if((it = _node.find("turbidity")) != _node.end()) turbidity = *it;
+		if((it = _node.find("aerialPerspective")) != _node.end()) aerialPerspective = *it;
+		if((it = _node.find("intensityMap")) != _node.end()) map = *it;
+		if((it = _node.find("intensityScale")) != _node.end()) intensity = readVec3(*it);
+		if((it = _node.find("radianceMap")) != _node.end()) map = *it;
+		if((it = _node.find("scenario")) != _node.end())
+		{
+			hasExplicitScenarios = true;
+			for(const auto& child : *it)
+				scenarios.push_back(child);
 		}
 
 		switch(type)
 		{
 		case Light::Type::POINT:
-			m_lights.push_back(std::make_shared<PointLight>(position, intensity, _lightNode.getName()));
+			m_lights.push_back(std::make_shared<PointLight>(position, intensity, _name));
 			break;
 		case Light::Type::LAMBERT:
-			m_lights.push_back(std::make_shared<LambertLight>(position, normal, intensity, _lightNode.getName()));
+			m_lights.push_back(std::make_shared<LambertLight>(position, normal, intensity, _name));
 			break;
 		case Light::Type::DIRECTIONAL:
-			m_lights.push_back(std::make_shared<DirectionalLight>(normal, intensity, _lightNode.getName()));
+			m_lights.push_back(std::make_shared<DirectionalLight>(normal, intensity, _name));
 			break;
 		case Light::Type::SPOT:
-			m_lights.push_back(std::make_shared<SpotLight>(position, normal, intensity, falloff, halfAngle, _lightNode.getName()));
+			m_lights.push_back(std::make_shared<SpotLight>(position, normal, intensity, falloff, halfAngle, _name));
 			break;
 		case Light::Type::SKY:
-			m_lights.push_back(std::make_shared<SkyLight>(normal, turbidity, aerialPerspective, _lightNode.getName()));
+			m_lights.push_back(std::make_shared<SkyLight>(normal, turbidity, aerialPerspective, _name));
 			break;
 		case Light::Type::GONIOMETRIC:
-			m_lights.push_back(std::make_shared<GoniometricLight>(position, intensity, map, _lightNode.getName()));
+			m_lights.push_back(std::make_shared<GoniometricLight>(position, intensity, map, _name));
 			break;
 		case Light::Type::ENVIRONMENT:
-			m_lights.push_back(std::make_shared<EnvironmentLight>(map, _lightNode.getName()));
+			m_lights.push_back(std::make_shared<EnvironmentLight>(map, _name));
 			break;
 		default:
-			sendMessage(MessageType::ERROR, "Light ", _lightNode.getName(), " does not have a type!");
+			sendMessage(MessageType::ERROR, "Light ", _name, " does not have a type!");
 			return;
 		}
 
@@ -615,7 +607,7 @@ namespace bim {
 		}
 	}
 
-	void BinaryModel::loadCamera(Json& json, const JsonValue& _camNode)
+	void BinaryModel::loadCamera(nlohmann::json _node, const std::string& _name)
 	{
 		// Default values
 		Camera::Type type = Camera::Type::NUM_TYPES;
@@ -635,57 +627,51 @@ namespace bim {
 		float aperture = 1.0f;
 		float velocity = 1.0f;
 		bool hasExplicitScenarios = false;
-		std::vector<const char*> scenarios;
+		std::vector<std::string> scenarios;
 
-		JsonValue camProp;
-		if(json.child(_camNode, camProp))
+		auto it = _node.find("type");
+		if(it != _node.end())
 		{
-			do {
-				if(strcmp(camProp.getName(), "type") == 0) type = Camera::TypeFromString(camProp.getString());
-				else if(strcmp(camProp.getName(), "position") == 0) position = readVec3(json, camProp);
-				else if(strcmp(camProp.getName(), "lookAt") == 0) lookAt = readVec3(json, camProp);
-				else if(strcmp(camProp.getName(), "up") == 0) up = readVec3(json, camProp);
-				else if(strcmp(camProp.getName(), "fov") == 0) fieldOfView = camProp.getFloat() / 180.0f * 3.141592654f;
-				else if(strcmp(camProp.getName(), "left") == 0) left = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "right") == 0) right = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "bottom") == 0) bottom = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "top") == 0) top = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "near") == 0) near = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "far") == 0) far = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "focalLength") == 0) focalLength = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "focusDistance") == 0) focusDistance = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "sensorSize") == 0) sensorSize = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "aperture") == 0) aperture = camProp.getFloat();
-				else if(strcmp(camProp.getName(), "scenario") == 0) 
-				{
-					hasExplicitScenarios = true;
-					if(camProp.getType() == JsonValue::Type::ARRAY)
-					{
-						JsonValue v;
-						json.child(camProp, v);
-						do {
-							scenarios.push_back(v.getString());
-						} while(json.next(v, v));
-					} else {
-						sendMessage(MessageType::ERROR, "Error while loading camera ", _camNode.getName(), ": scenarios must be an array of strings!");
-					}
-				} else if(strcmp(camProp.getName(), "velocity") == 0) velocity = camProp.getFloat();
-			} while(json.next(camProp, camProp));
+			type = Camera::TypeFromString(*it);
+		} else sendMessage(MessageType::ERROR, "No type given for camera ", _name);
+
+		if((it = _node.find("position")) != _node.end()) position = readVec3(*it);
+		if((it = _node.find("lookAt")) != _node.end()) lookAt = readVec3(*it);
+		if((it = _node.find("up")) != _node.end()) up = readVec3(*it);
+		if((it = _node.find("fov")) != _node.end()) fieldOfView = *it;
+		if((it = _node.find("left")) != _node.end()) left = *it;
+		if((it = _node.find("right")) != _node.end()) right = *it;
+		if((it = _node.find("bottom")) != _node.end()) bottom = *it;
+		if((it = _node.find("top")) != _node.end()) top = *it;
+		if((it = _node.find("near")) != _node.end()) near = *it;
+		if((it = _node.find("far")) != _node.end()) far = *it;
+		if((it = _node.find("focalLength")) != _node.end()) focalLength = *it;
+		if((it = _node.find("focusDistance")) != _node.end()) focusDistance = *it;
+		if((it = _node.find("sensorSize")) != _node.end()) sensorSize = *it;
+		if((it = _node.find("aperture")) != _node.end()) aperture = *it;
+		if((it = _node.find("velocity")) != _node.end()) velocity = *it;
+		if((it = _node.find("scenario")) != _node.end())
+		{
+			hasExplicitScenarios = true;
+			for(const auto& child : *it)
+				scenarios.push_back(child);
 		}
+
+		fieldOfView *= ei::PI / 180.0f;
 
 		switch(type)
 		{
 		case Camera::Type::PERSPECTIVE:
-			m_cameras.push_back(std::make_shared<PerspectiveCamera>(position, lookAt, up, fieldOfView, _camNode.getName()));
+			m_cameras.push_back(std::make_shared<PerspectiveCamera>(position, lookAt, up, fieldOfView, _name));
 			break;
 		case Camera::Type::ORTHOGRAPHIC:
-			m_cameras.push_back(std::make_shared<OrthographicCamera>(position, lookAt, up, left, right, bottom, top, near, far, _camNode.getName()));
+			m_cameras.push_back(std::make_shared<OrthographicCamera>(position, lookAt, up, left, right, bottom, top, near, far, _name));
 			break;
 		case Camera::Type::FOCUS:
-			m_cameras.push_back(std::make_shared<FocusCamera>(position, lookAt, up, focalLength, focusDistance, sensorSize, aperture, _camNode.getName()));
+			m_cameras.push_back(std::make_shared<FocusCamera>(position, lookAt, up, focalLength, focusDistance, sensorSize, aperture, _name));
 			break;
 		default:
-			sendMessage(MessageType::ERROR, "Camera ", _camNode.getName(), " does not have a type!");
+			sendMessage(MessageType::ERROR, "Camera ", _name, " does not have a type!");
 			return;
 		}
 		m_cameras.back()->velocity = velocity;
@@ -733,202 +719,136 @@ namespace bim {
 
 	void BinaryModel::storeEnvironmentFile(const char* _envFile, const char* _bimFile)
 	{
-		JsonWriter json;
-		if(!json.open(_envFile)) {
+		std::ofstream envFile(_envFile);
+		if(!envFile) {
 			sendMessage(MessageType::ERROR, "Opening environment JSON failed!");
 			return;
 		}
-		json.beginObject();
-		json.valuePreamble("scene");
-		json.value(makeRelative(_envFile, _bimFile).c_str());
+
+		nlohmann::json json;
+
+		json["scene"] = makeRelative(_envFile, _bimFile);
 
 		if(m_accelerator != Property::DONT_CARE)
 		{
-			json.valuePreamble("accelerator");
 			if(m_accelerator == Property::AABOX_BVH)
-				json.value("aabox");
+				json["accelerator"] = "aabox";
 			else if(m_accelerator == Property::OBOX_BVH)
-				json.value("obox");
+				json["accelerator"] = "obox";
 		}
 
-		json.valuePreamble("materials");
-		json.beginObject();
+		nlohmann::json materialsNode = json["materials"];
 		for(auto& mat : m_materials)
 		{
-			json.valuePreamble(mat.second.getName().c_str());
-			json.beginObject();
-			json.valuePreamble("type");
-			json.value(mat.second.getType().c_str());
+			nlohmann::json matNode = materialsNode[mat.second.getName()];
+			matNode["type"] = mat.second.getType();
 			for(auto& tex : mat.second.m_textureNames)
-			{
-				json.valuePreamble(tex.first.c_str());
-				json.value(tex.second.c_str());
-			}
+				matNode[tex.first] = tex.second;
 			for(auto& val : mat.second.m_values)
 			{
-				json.valuePreamble(val.first.c_str());
-				json.value(val.second.values.m_data, val.second.numComponents);
+				auto& arrayNode = matNode[val.first];
+				for(int i = 0; i < val.second.numComponents; ++i)
+					arrayNode.push_back(val.second.values[i]);
 			}
-			json.endObject();
 		}
-		json.endObject();
 
-		json.valuePreamble("lights");
-		json.beginObject();
+		nlohmann::json lightsNode = json["lights"];
 		for(auto& light : m_lights)
 		{
-			json.valuePreamble(light->name.c_str());
-			json.beginObject();
-			json.valuePreamble("type");
-			json.value(Light::TypeToString(light->type).c_str());
+			nlohmann::json lightNode = materialsNode[light->name];
+			lightNode["type"] = Light::TypeToString(light->type);
 			switch(light->type)
 			{
 			case Light::Type::POINT: {
 				PointLight* l = dynamic_cast<PointLight*>(light.get());
-				json.valuePreamble("position");
-				json.value(reinterpret_cast<float*>(&l->position), 3);
-				json.valuePreamble("intensity");
-				json.value(reinterpret_cast<float*>(&l->intensity), 3);
+				lightNode["position"] = {l->position.x, l->position.y, l->position.z};
+				lightNode["intensity"] = {l->intensity.x, l->intensity.y, l->intensity.z};
 			} break;
 			case Light::Type::LAMBERT: {
 				LambertLight* l = dynamic_cast<LambertLight*>(light.get());
-				json.valuePreamble("position");
-				json.value(reinterpret_cast<float*>(&l->position), 3);
-				json.valuePreamble("intensity");
-				json.value(reinterpret_cast<float*>(&l->intensity), 3);
-				json.valuePreamble("normal");
-				json.value(reinterpret_cast<float*>(&l->normal), 3);
+				lightNode["position"] = {l->position.x, l->position.y, l->position.z};
+				lightNode["intensity"] = {l->intensity.x, l->intensity.y, l->intensity.z};
+				lightNode["normal"] = {l->normal.x, l->normal.y, l->normal.z};
 			} break;
 			case Light::Type::DIRECTIONAL: {
 				DirectionalLight* l = dynamic_cast<DirectionalLight*>(light.get());
-				json.valuePreamble("direction");
-				json.value(reinterpret_cast<float*>(&l->direction), 3);
-				json.valuePreamble("irradiance");
-				json.value(reinterpret_cast<float*>(&l->irradiance), 3);
+				lightNode["direction"] = {l->direction.x, l->direction.y, l->direction.z};
+				lightNode["irradiance"] = {l->irradiance.x, l->irradiance.y, l->irradiance.z};
 			} break;
 			case Light::Type::SPOT: {
 				SpotLight* l = dynamic_cast<SpotLight*>(light.get());
-				json.valuePreamble("position");
-				json.value(reinterpret_cast<float*>(&l->position), 3);
-				json.valuePreamble("direction");
-				json.value(reinterpret_cast<float*>(&l->direction), 3);
-				json.valuePreamble("peakIntensity");
-				json.value(reinterpret_cast<float*>(&l->peakIntensity), 3);
-				json.valuePreamble("falloff");
-				json.value(l->falloff);
-				json.valuePreamble("halfAngle");
-				json.value(l->halfAngle);
+				lightNode["position"] = {l->position.x, l->position.y, l->position.z};
+				lightNode["direction"] = {l->direction.x, l->direction.y, l->direction.z};
+				lightNode["peakIntensity"] = {l->peakIntensity.x, l->peakIntensity.y, l->peakIntensity.z};
+				lightNode["falloff"] = l->falloff;
+				lightNode["halfAngle"] = l->halfAngle;
 			} break;
 			case Light::Type::SKY: {
 				SkyLight* l = dynamic_cast<SkyLight*>(light.get());
-				json.valuePreamble("sunDirection");
-				json.value(reinterpret_cast<float*>(&l->sunDirection), 3);
-				json.valuePreamble("turbidity");
-				json.value(l->turbidity);
-				json.valuePreamble("aerialPerspective");
-				json.value(l->aerialPerspective);
+				lightNode["sunDirection"] = {l->sunDirection.x, l->sunDirection.y, l->sunDirection.z};
+				lightNode["turbidity"] = l->turbidity;
+				lightNode["aerialPerspective"] = l->aerialPerspective;
 			} break;
 			case Light::Type::GONIOMETRIC: {
 				GoniometricLight* l = dynamic_cast<GoniometricLight*>(light.get());
-				json.valuePreamble("intensityMap");
-				json.value(l->intensityMap.c_str());
-				json.valuePreamble("intensityScale");
-				json.value(reinterpret_cast<float*>(&l->intensityScale), 3);
-				json.valuePreamble("position");
-				json.value(reinterpret_cast<float*>(&l->position), 3);
+				lightNode["position"] = {l->position.x, l->position.y, l->position.z};
+				lightNode["intensityScale"] = {l->intensityScale.x, l->intensityScale.y, l->intensityScale.z};
+				lightNode["intensityMap"] = l->intensityMap;
 			} break;
 			case Light::Type::ENVIRONMENT: {
 				EnvironmentLight* l = dynamic_cast<EnvironmentLight*>(light.get());
-				json.valuePreamble("radianceMap");
-				json.value(l->radianceMap.c_str());
+				lightNode["radianceMap"] = l->radianceMap;
 			} break;
 			}
 			// Find all scenarios which reference this light
-			json.valuePreamble("scenario");
-			std::vector<const char*> scenarioNames;
+			auto& scenariosNode = lightNode["scenario"];
 			for(auto & sc : m_scenarios)
-			{
-				if(sc.hasLight(light))
-					scenarioNames.push_back(sc.getName().c_str());
-			}
-			json.value(scenarioNames.data(), static_cast<int>(scenarioNames.size()));
-			json.endObject();
+				scenariosNode.push_back(sc.getName());
 		}
-		json.endObject();
 
-		json.valuePreamble("cameras");
-		json.beginObject();
+		nlohmann::json camerasNode = json["cameras"];
 		for(auto& cam : m_cameras)
 		{
-			json.valuePreamble(cam->name.c_str());
-			json.beginObject();
-			json.valuePreamble("type");
-			json.value(Camera::TypeToString(cam->type).c_str());
+			nlohmann::json camNode = materialsNode[cam->name];
+			camNode["type"] = Camera::TypeToString(cam->type);
 			switch(cam->type)
 			{
 			case Camera::Type::PERSPECTIVE: {
 				PerspectiveCamera* c = dynamic_cast<PerspectiveCamera*>(cam.get());
-				json.valuePreamble("position");
-				json.value(reinterpret_cast<float*>(&c->position), 3);
-				json.valuePreamble("lookAt");
-				json.value(reinterpret_cast<float*>(&c->lookAt), 3);
-				json.valuePreamble("up");
-				json.value(reinterpret_cast<float*>(&c->up), 3);
-				json.valuePreamble("fov");
-				json.value(c->verticalFOV * 180.0f / 3.141592654f);
+				camNode["position"] = {c->position.x, c->position.y, c->position.z};
+				camNode["lookAt"] = {c->lookAt.x, c->lookAt.y, c->lookAt.z};
+				camNode["up"] = {c->up.x, c->up.y, c->up.z};
+				camNode["fov"] = c->verticalFOV * 180.0f / 3.141592654f;
 			} break;
 			case Camera::Type::ORTHOGRAPHIC: {
 				OrthographicCamera* c = dynamic_cast<OrthographicCamera*>(cam.get());
-				json.valuePreamble("position");
-				json.value(reinterpret_cast<float*>(&c->position), 3);
-				json.valuePreamble("lookAt");
-				json.value(reinterpret_cast<float*>(&c->lookAt), 3);
-				json.valuePreamble("up");
-				json.value(reinterpret_cast<float*>(&c->up), 3);
-				json.valuePreamble("left");
-				json.value(c->left);
-				json.valuePreamble("right");
-				json.value(c->right);
-				json.valuePreamble("bottom");
-				json.value(c->bottom);
-				json.valuePreamble("top");
-				json.value(c->top);
-				json.valuePreamble("near");
-				json.value(c->near);
-				json.valuePreamble("far");
-				json.value(c->far);
+				camNode["position"] = {c->position.x, c->position.y, c->position.z};
+				camNode["lookAt"] = {c->lookAt.x, c->lookAt.y, c->lookAt.z};
+				camNode["up"] = {c->up.x, c->up.y, c->up.z};
+				camNode["left"] = c->left;
+				camNode["right"] = c->right;
+				camNode["bottom"] = c->bottom;
+				camNode["top"] = c->top;
+				camNode["near"] = c->near;
+				camNode["far"] = c->far;
 			} break;
 			case Camera::Type::FOCUS: {
 				FocusCamera* c = dynamic_cast<FocusCamera*>(cam.get());
-				json.valuePreamble("position");
-				json.value(reinterpret_cast<float*>(&c->position), 3);
-				json.valuePreamble("lookAt");
-				json.value(reinterpret_cast<float*>(&c->lookAt), 3);
-				json.valuePreamble("up");
-				json.value(reinterpret_cast<float*>(&c->up), 3);
-				json.valuePreamble("focalLength");
-				json.value(c->focalLength);
-				json.valuePreamble("focusDistance");
-				json.value(c->focusDistance);
-				json.valuePreamble("sensorSize");
-				json.value(c->sensorSize);
-				json.valuePreamble("aperture");
-				json.value(c->aperture);
+				camNode["position"] = {c->position.x, c->position.y, c->position.z};
+				camNode["lookAt"] = {c->lookAt.x, c->lookAt.y, c->lookAt.z};
+				camNode["up"] = {c->up.x, c->up.y, c->up.z};
+				camNode["focalLength"] = c->focalLength;
+				camNode["focusDistance"] = c->focusDistance;
+				camNode["sensorSize"] = c->sensorSize;
+				camNode["aperture"] = c->aperture;
 			} break;
 			}
-			// Find all scenarios which reference this light
-			json.valuePreamble("scenario");
-			std::vector<const char*> scenarioNames;
+			// Find all scenarios which reference this camera
+			auto& scenariosNode = camNode["scenario"];
 			for(auto & sc : m_scenarios)
-			{
-				if(sc.getCamera() == cam)
-					scenarioNames.push_back(sc.getName().c_str());
-			}
-			json.value(scenarioNames.data(), static_cast<int>(scenarioNames.size()));
-			json.endObject();
+				scenariosNode.push_back(sc.getName());
 		}
-		json.endObject();
 
-		json.endObject();
+		envFile << json;
 	}
 }

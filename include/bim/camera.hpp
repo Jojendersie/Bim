@@ -17,12 +17,12 @@ namespace bim {
 		};
 		ENUM_CONVERT_FUNC(Type)
 
-		explicit Camera(Type _type, const char* _name = nullptr) :
+		explicit Camera(Type _type, std::string _name = "") :
 			type(_type),
 			velocity(1.0f)
 		{
 			static int s_genericCameraName = 0;
-			if(_name) name = _name;
+			if(!_name.empty()) name = move(_name);
 			else name = s_genericCameraName++;
 		}
 		virtual ~Camera() = default;
@@ -34,12 +34,12 @@ namespace bim {
 
 	struct PerspectiveCamera : public Camera
 	{
-		explicit PerspectiveCamera(const char* _name = nullptr) :
-			Camera(Type::PERSPECTIVE, _name)
+		explicit PerspectiveCamera(std::string _name = "") :
+			Camera(Type::PERSPECTIVE, move(_name))
 		{}
 
-		PerspectiveCamera(const ei::Vec3& _position, const ei::Vec3& _lookAt, const ei::Vec3& _up, float _fov, const char* _name = nullptr) :
-			Camera(Type::PERSPECTIVE, _name),
+		PerspectiveCamera(const ei::Vec3& _position, const ei::Vec3& _lookAt, const ei::Vec3& _up, float _fov, std::string _name = "") :
+			Camera(Type::PERSPECTIVE, move(_name)),
 			position(_position),
 			lookAt(_lookAt),
 			up(_up),
@@ -54,12 +54,12 @@ namespace bim {
 
 	struct OrthographicCamera : public Camera
 	{
-		explicit OrthographicCamera(const char* _name = nullptr) :
-			Camera(Type::ORTHOGRAPHIC, _name)
+		explicit OrthographicCamera(std::string _name = "") :
+			Camera(Type::ORTHOGRAPHIC, move(_name))
 		{}
 
-		OrthographicCamera(const ei::Vec3& _position, const ei::Vec3& _lookAt, const ei::Vec3& _up, float _left, float _right, float _bottom, float _top, float _near, float _far, const char* _name = nullptr) :
-			Camera(Type::ORTHOGRAPHIC, _name),
+		OrthographicCamera(const ei::Vec3& _position, const ei::Vec3& _lookAt, const ei::Vec3& _up, float _left, float _right, float _bottom, float _top, float _near, float _far, std::string _name = "") :
+			Camera(Type::ORTHOGRAPHIC, move(_name)),
 			position(_position),
 			lookAt(_lookAt),
 			up(_up),
@@ -84,12 +84,12 @@ namespace bim {
 
 	struct FocusCamera : public Camera
 	{
-		explicit FocusCamera(const char* _name = nullptr) :
-			Camera(Type::FOCUS, _name)
+		explicit FocusCamera(std::string _name = "") :
+			Camera(Type::FOCUS, move(_name))
 		{}
 
-		FocusCamera(const ei::Vec3& _position, const ei::Vec3& _lookAt, const ei::Vec3& _up, float _focalLength, float _focusDistance, float _sensorSize, float _aperture, const char* _name = nullptr) :
-			Camera(Type::FOCUS, _name),
+		FocusCamera(const ei::Vec3& _position, const ei::Vec3& _lookAt, const ei::Vec3& _up, float _focalLength, float _focusDistance, float _sensorSize, float _aperture, std::string _name = "") :
+			Camera(Type::FOCUS, move(_name)),
 			position(_position),
 			lookAt(_lookAt),
 			up(_up),

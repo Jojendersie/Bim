@@ -34,6 +34,12 @@ namespace bim
 			_message += _first;
 			buildMessageString(_message, _args...);
 		}
+		template<typename... TArgs>
+		void buildMessageString(std::string& _message, const std::string& _first, TArgs... _args)
+		{
+			_message += _first;
+			buildMessageString(_message, _args...);
+		}
 	}
 
 	template<typename... TArgs>

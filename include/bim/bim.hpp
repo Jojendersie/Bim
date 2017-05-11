@@ -10,6 +10,9 @@
 
 namespace bim {
 
+	using Json = nlohmann::basic_json<std::map, std::vector, std::string, bool, std::int64_t,
+		std::uint64_t, float, std::allocator, nlohmann::adl_serializer>;
+
 	/// Main interface to load and access data in a .bim file.
 	///
 	/// A bim file contains a lot of arrays each representing a single property.
@@ -111,9 +114,9 @@ namespace bim {
 		void addLight(std::shared_ptr<Light> _light);
 	private:
 		std::string loadEnv(const char* _envFile, bool _ignoreBinary);
-		void loadMaterial(const nlohmann::json& _node, const std::string& _name);
-		void loadLight(const nlohmann::json& _node, const std::string& _name);
-		void loadCamera(const nlohmann::json& _node, const std::string& _name);
+		void loadMaterial(const Json& _node, const std::string& _name);
+		void loadLight(const Json& _node, const std::string& _name);
+		void loadCamera(const Json& _node, const std::string& _name);
 
 		enum class ChunkState {
 			LOADED,

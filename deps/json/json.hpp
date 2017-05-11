@@ -1,4 +1,15 @@
 /*
+THIS FILE IS CONFIGURED!
+It does not do line breaks inside arrays.
+For changes look around line 6837...
+
+There is an issue which will maybe fix this in a feature version:
+  https://github.com/nlohmann/json/issues/229
+
+Johannes Jendersie
+*/
+
+/*
 __ _____ _____ _____
 __|  |   __|     |   | |  JSON for Modern C++
 |  |  |__   |  |  | | | |  version 2.1.1
@@ -6840,30 +6851,19 @@ namespace nlohmann
 
 					if (pretty_print)
 					{
-						o->write_characters("[\n", 2);
-
-						// variable to hold indentation for recursive calls
-						const auto new_indent = current_indent + indent_step;
-						if (indent_string.size() < new_indent)
-						{
-							indent_string.resize(new_indent, ' ');
-						}
+						o->write_characters("[", 1);
 
 						// first n-1 elements
 						for (auto i = val.m_value.array->cbegin(); i != val.m_value.array->cend() - 1; ++i)
 						{
-							o->write_characters(indent_string.c_str(), new_indent);
-							dump(*i, true, indent_step, new_indent);
-							o->write_characters(",\n", 2);
+							dump(*i, true, indent_step, current_indent);
+							o->write_characters(", ", 2);
 						}
 
 						// last element
 						assert(not val.m_value.array->empty());
-						o->write_characters(indent_string.c_str(), new_indent);
-						dump(val.m_value.array->back(), true, indent_step, new_indent);
+						dump(val.m_value.array->back(), true, indent_step, current_indent);
 
-						o->write_character('\n');
-						o->write_characters(indent_string.c_str(), current_indent);
 						o->write_character(']');
 					}
 					else

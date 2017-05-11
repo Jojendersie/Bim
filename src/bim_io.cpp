@@ -444,14 +444,14 @@ namespace bim {
 			sendMessage(MessageType::ERROR, "Opening environment JSON failed!");
 			return move(binarySceneFile);
 		}
-		nlohmann::json jsonRoot;
+		Json jsonRoot;
 		try {
 			envFile >> jsonRoot;
 
 			auto it = jsonRoot.find("materials");
 			if(it != jsonRoot.end())
 			{
-				for(nlohmann::json::iterator itm = it->begin(); itm != it->end(); ++itm)
+				for(Json::iterator itm = it->begin(); itm != it->end(); ++itm)
 					loadMaterial(itm.value(), itm.key());
 			} else sendMessage(MessageType::ERROR, "Cannot find 'materials' section in the scene file!");
 
@@ -469,12 +469,12 @@ namespace bim {
 
 			if((it = jsonRoot.find("lights")) != jsonRoot.end())
 			{
-				for(nlohmann::json::iterator itl = it->begin(); itl != it->end(); ++itl)
+				for(Json::iterator itl = it->begin(); itl != it->end(); ++itl)
 					loadLight(itl.value(), itl.key());
 			} // No lights is OK - scene may contain emissive surfaces.
 
 			if((it = jsonRoot.find("cameras")) != jsonRoot.end())
-				for(nlohmann::json::iterator itc = it->begin(); itc != it->end(); ++itc)
+				for(Json::iterator itc = it->begin(); itc != it->end(); ++itc)
 					loadCamera(itc.value(), itc.key());
 			else sendMessage(MessageType::ERROR, "Cannot find 'cameras' section in the scene file!");
 		} catch(std::exception _e) {
@@ -484,13 +484,13 @@ namespace bim {
 		return move(binarySceneFile);
 	}
 
-	void BinaryModel::loadMaterial(const nlohmann::json& _node, const std::string& _name)
+	void BinaryModel::loadMaterial(const Json& _node, const std::string& _name)
 	{
 		Material mat;
 		mat.m_name = _name;
 		// A material contains a list of strings or float (arrays).
-		//for(nlohmann::json::iterator it : _node)
-		for(nlohmann::json::const_iterator it = _node.begin(); it != _node.end(); ++it)
+		//for(Json::iterator it : _node)
+		for(Json::const_iterator it = _node.begin(); it != _node.end(); ++it)
 		{
 			if(it->is_string()) {
 				if(strcmp(it.key().c_str(), "type") == 0)
@@ -513,7 +513,7 @@ namespace bim {
 		m_materials.emplace(mat.getName(), mat);
 	}
 
-	static ei::Vec3 readVec3(const nlohmann::json& _node)
+	static ei::Vec3 readVec3(const Json& _node)
 	{
 		ei::Vec3 value(0.0f);
 		// Fallback to zero if something goes wrong
@@ -523,7 +523,7 @@ namespace bim {
 		return value;
 	}
 
-	void BinaryModel::loadLight(const nlohmann::json& _node, const std::string& _name)
+	void BinaryModel::loadLight(const Json& _node, const std::string& _name)
 	{
 		// Default values for all possible light properties (some are not
 		// used dependent on the final type).
@@ -607,7 +607,7 @@ namespace bim {
 		}
 	}
 
-	void BinaryModel::loadCamera(const nlohmann::json& _node, const std::string& _name)
+	void BinaryModel::loadCamera(const Json& _node, const std::string& _name)
 	{
 		// Default values
 		Camera::Type type = Camera::Type::NUM_TYPES;
@@ -725,7 +725,7 @@ namespace bim {
 			return;
 		}
 
-		nlohmann::json json;
+		Json json;
 
 		json["scene"] = makeRelative(_envFile, _bimFile);
 
@@ -737,10 +737,10 @@ namespace bim {
 				json["accelerator"] = "obox";
 		}
 
-		nlohmann::json& materialsNode = json["materials"];
+		Json& materialsNode = json["materials"];
 		for(auto& mat : m_materials)
 		{
-			nlohmann::json& matNode = materialsNode[mat.second.getName()];
+			Json& matNode = materialsNode[mat.second.getName()];
 			matNode["type"] = mat.second.getType();
 			for(auto& tex : mat.second.m_textureNames)
 				matNode[tex.first] = tex.second;
@@ -752,10 +752,10 @@ namespace bim {
 			}
 		}
 
-		nlohmann::json& lightsNode = json["lights"];
+		Json& lightsNode = json["lights"];
 		for(auto& light : m_lights)
 		{
-			nlohmann::json& lightNode = materialsNode[light->name];
+			Json& lightNode = lightsNode[light->name];
 			lightNode["type"] = Light::TypeToString(light->type);
 			switch(light->type)
 			{
@@ -803,13 +803,14 @@ namespace bim {
 			// Find all scenarios which reference this light
 			auto& scenariosNode = lightNode["scenario"];
 			for(auto & sc : m_scenarios)
-				scenariosNode.push_back(sc.getName());
+				if(sc.hasLight(light))
+					scenariosNode.push_back(sc.getName());
 		}
 
-		nlohmann::json& camerasNode = json["cameras"];
+		Json& camerasNode = json["cameras"];
 		for(auto& cam : m_cameras)
 		{
-			nlohmann::json& camNode = materialsNode[cam->name];
+			Json& camNode = camerasNode[cam->name];
 			camNode["type"] = Camera::TypeToString(cam->type);
 			switch(cam->type)
 			{
@@ -846,7 +847,8 @@ namespace bim {
 			// Find all scenarios which reference this camera
 			auto& scenariosNode = camNode["scenario"];
 			for(auto & sc : m_scenarios)
-				scenariosNode.push_back(sc.getName());
+				if(sc.getCamera() == cam)
+					scenariosNode.push_back(sc.getName());
 		}
 
 		// pretty print with indent of 4 spaces

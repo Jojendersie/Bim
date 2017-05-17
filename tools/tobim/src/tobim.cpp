@@ -59,6 +59,7 @@ bool loadScene(const std::string& _fileName, Assimp::Importer& _importer)
 
 void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4& _transformation, bim::BinaryModel& _bim)
 {
+	_bim.makeChunkResident(ei::IVec3(0));
 	bim::Chunk& chunk = *_bim.getChunk(ei::IVec3(0));
 	// Compute scene graph transformation
 	ei::Mat4x4 nodeTransform; memcpy(&nodeTransform, &_node->mTransformation, sizeof(ei::Mat4x4));

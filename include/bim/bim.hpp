@@ -57,7 +57,7 @@ namespace bim {
 		void storeChunk(const char* _bimFile, const ei::IVec3& _chunkPos);
 
 		const ei::IVec3& getNumChunks() const { return m_numChunks; }
-		Chunk* getChunk(const ei::IVec3& _chunkPos) { return &m_chunks[dot(_chunkPos, m_dimScale)]; }
+		Chunk* getChunk(const ei::IVec3& _chunkPos);
 		
 		/// Check if a chunk is loaded and if not do it.
 		void makeChunkResident(const ei::IVec3& _chunkPos);

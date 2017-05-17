@@ -235,6 +235,15 @@ namespace bim {
 		_chunkProp = Property::Val(_chunkProp | _newProp);
 	}
 
+	Chunk * BinaryModel::getChunk(const ei::IVec3 & _chunkPos)
+	{
+		int chunkIndex = dot(_chunkPos, m_dimScale);
+		if(m_chunkStates[chunkIndex] == ChunkState::LOADED)
+			return &m_chunks[chunkIndex];
+		sendMessage(MessageType::ERROR, "Chunk is not resident. getChunk() is invalid in this state.");
+		return nullptr;
+	}
+
 	void BinaryModel::makeChunkResident(const ei::IVec3& _chunk)
 	{
 		int idx = dot(m_dimScale, _chunk);

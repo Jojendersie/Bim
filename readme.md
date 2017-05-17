@@ -195,7 +195,8 @@ There are several types of materials:
 
 `legacy`: Non-realistic model without energy preservation
 
-    albedo          Lambertian diffuse color (RGB)                                  {0.5, 0.5, 0.5}
+    albedo          Lambertian diffuse color (RGB)                                  {0.5, 0.5, 0.5, 1.0}
+                    May contain an opacity (alpha) channel.
     specularColor   A color for specular highlights. (RGB)                          {1.0, 1.0, 1.0}
     reflectivity    Isotropic amount of reflected light (offset term in Fresnel     {0.05}
                     approximations) [0,1] (S)
@@ -210,6 +211,15 @@ There are several types of materials:
 	reflectivity    Fresnel offset term F0.                                         {0.05}
 	optDensity		Absorption coefficient (RGB) and real refraction index N.       {0, 0, 0, 1.3}
 
+`thinLayer`: a material for leaves and foils. If transmitted the render expects to be in free space again instead of inside a model.
+
+	backscatterColor   Procentual amount of back scattered light (if not reflected  {0.5, 0.5, 0.5}
+                       specular before).
+    transmittance      Procentual amount of transmitted light.                      {0.5, 0.5, 0.5}
+                       backscatterColor + transmittance <= 1!
+    roughnessUp        Surface roughness in normal direction. (S)                   {1.0}
+    roughnessDown      Surface roughness opposed to the normal. (S)                 {1.0}
+    scatteringStrength "Roughness" for transmitted light. (S)                       {1.0}
 
 where `(S)` is a scalar, `(RGB)` is an RGB color in [0,1]^3, `[]` note value intervals or units and `{x}` the default values.
 Every property is optional (its default is used if not given).

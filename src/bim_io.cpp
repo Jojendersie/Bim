@@ -477,7 +477,7 @@ namespace bim {
 				for(Json::iterator itc = it->begin(); itc != it->end(); ++itc)
 					loadCamera(itc.value(), itc.key());
 			else sendMessage(MessageType::ERROR, "Cannot find 'cameras' section in the scene file!");
-		} catch(std::exception _e) {
+		} catch(const std::exception& _e) {
 			sendMessage(MessageType::ERROR, _e.what());
 		}
 

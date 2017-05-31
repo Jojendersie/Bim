@@ -39,8 +39,7 @@ bool loadScene(const std::string& _fileName, Assimp::Importer& _importer)
 		aiPrimitiveType_POINT | aiPrimitiveType_LINE );
 
 	_importer.ReadFile( _fileName,
-		aiProcess_GenSmoothNormals		|
-		aiProcess_CalcTangentSpace		|
+		//aiProcess_CalcTangentSpace		|
 		aiProcess_Triangulate			|
 		//aiProcess_GenSmoothNormals		|	// TODO: is angle 80% already set?
 		aiProcess_ValidateDataStructure	|
@@ -50,8 +49,8 @@ bool loadScene(const std::string& _fileName, Assimp::Importer& _importer)
 		aiProcess_FindInvalidData		|
 		aiProcess_GenUVCoords			|
 		aiProcess_TransformUVCoords		|
-		aiProcess_ImproveCacheLocality	|
-		aiProcess_JoinIdenticalVertices	|
+//		aiProcess_ImproveCacheLocality	|
+//		aiProcess_JoinIdenticalVertices	|
 		aiProcess_FlipUVs );
 
 	return _importer.GetScene() != nullptr;
@@ -94,15 +93,18 @@ void importGeometry(const aiScene* _scene, const aiNode* _node, const ei::Mat4x4
 				ei::Vec3 tmp;
 				memcpy(&tmp, &mesh->mVertices[face.mIndices[j]], sizeof(ei::Vec3));
 				newVertex[j].position = ei::transform(tmp, nodeTransform);
-				memcpy(&tmp, &mesh->mNormals[face.mIndices[j]], sizeof(ei::Vec3));
-				newVertex[j].normal = ei::transform(tmp, invTransTransform);
+				if(mesh->HasNormals())
+				{
+					memcpy(&tmp, &mesh->mNormals[face.mIndices[j]], sizeof(ei::Vec3));
+					newVertex[j].normal = ei::transform(tmp, invTransTransform);
+				} else newVertex[j].normal = ei::Vec3(0.0f);
 				if(mesh->HasTangentsAndBitangents())
 				{
 					memcpy(&tmp, &mesh->mTangents[face.mIndices[j]], sizeof(ei::Vec3));
 					newVertex[j].tangent = ei::transform(tmp, invTransTransform);
 					memcpy(&tmp, &mesh->mBitangents[face.mIndices[j]], sizeof(ei::Vec3));
 					newVertex[j].bitangent = ei::transform(tmp, invTransTransform);
-				}
+				} else newVertex[j].tangent = newVertex[j].bitangent = ei::Vec3(0.0f);
 				if(mesh->HasTextureCoords(0)) memcpy(&newVertex[j].texCoord0, &mesh->mTextureCoords[0][face.mIndices[j]], sizeof(ei::Vec2));
 				if(mesh->HasTextureCoords(1)) memcpy(&newVertex[j].texCoord1, &mesh->mTextureCoords[1][face.mIndices[j]], sizeof(ei::Vec2));
 				if(mesh->HasTextureCoords(2)) memcpy(&newVertex[j].texCoord2, &mesh->mTextureCoords[2][face.mIndices[j]], sizeof(ei::Vec2));
@@ -317,7 +319,7 @@ int main(int _numArgs, const char** _args)
 		bim::sendMessage(bim::MessageType::INFO, "removing redundant vertices...");
 		model.getChunk(ei::IVec3(0))->removeRedundantVertices();
 		bim::sendMessage(bim::MessageType::INFO, "computing tangent space...");
-		model.getChunk(ei::IVec3(0))->computeTangentSpace(bim::Property::Val(bim::Property::NORMAL | bim::Property::TANGENT | bim::Property::BITANGENT), false);
+		model.getChunk(ei::IVec3(0))->computeTangentSpace(bim::Property::Val(bim::Property::NORMAL | bim::Property::TANGENT | bim::Property::BITANGENT), true);
 		bim::sendMessage(bim::MessageType::INFO, "building BVH...");
 		model.getChunk(ei::IVec3(0))->buildHierarchy(method);
 		if(computeAAB) {

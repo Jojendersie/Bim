@@ -200,11 +200,15 @@ There are several types of materials:
     reflectivity    Isotropic amount of reflected light (offset term in Fresnel     {0.05}
                     approximations) [0,1] (S)
                     To avoid any reflections scale down the specularColor.
-    roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)   {0}
-    transmissivity  Degree of opacity (1-transparentcy) [0,1] (S).                  {0.0}
-                    Color is taken from albedo.
-    refractionIdxN  First part of complex valued refraction index. (S)              {1.3}
+    roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)    {0.5, 0.5, 0}
 	emissivity      Exitant radiant energy (RGB) [cd/m^2]                           {0, 0, 0}
+	
+`transparent`: Material for glass, water, wine, ...
+
+	specularColor   A color for specular highlights. (RGB)                          {1.0, 1.0, 1.0}
+	roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)    {0.5, 0.5, 0}
+	reflectivity    Fresnel offset term F0.                                         {0.05}
+	optDensity		Absorption coefficient (RGB) and real refraction index N.       {0, 0, 0, 1.3}
 
 
 where `(S)` is a scalar, `(RGB)` is an RGB color in [0,1]^3, `[]` note value intervals or units and `{x}` the default values.

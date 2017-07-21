@@ -163,6 +163,7 @@ namespace bim {
 		{
 			KD_TREE,	///< Sort once in all directions, then recursively split at median
 			SAH,		///< Use surface area heuristic in the 'largest' dimension.
+			SBVH,		///< "Spatial Splits in Bounding Volume Hierarchies". Results in more nodes with less overlap by partial reference duplication. Other than that it uses SAH too.
 		};
 		/// Build a hierarchy on top of all triangles
 		void buildHierarchy(BuildMethod _method);
@@ -211,6 +212,7 @@ namespace bim {
 
 		void buildBVH_kdtree();
 		void buildBVH_SAHsplit();
+		void buildBVH_SBVH();
 		// All build methods must write left->firstChild and right->escape. After
 		// the primary build the remap iterates the tree once and replaces all pointers
 		// by the correct ones.

@@ -236,7 +236,7 @@ int main(int _numArgs, const char** _args)
 	// Analyze all input arguments and store results in some variables
 	std::string inputModelFile;
 	std::string outputFileName;
-	bim::Chunk::BuildMethod method = bim::Chunk::BuildMethod::SAH;
+	bim::Chunk::BuildMethod method = bim::Chunk::BuildMethod::SBVH;
 	ei::IVec3 chunkGridRes(1);
 	bool computeAAB = false;
 	bool computeOB = false;
@@ -340,7 +340,8 @@ int main(int _numArgs, const char** _args)
 		t0 = high_resolution_clock::now();
 		model.getChunk(ei::IVec3(0))->buildHierarchy(method);
 		t1 = high_resolution_clock::now();
-		bim::sendMessage(bim::MessageType::INFO, "Finished BVH structure in ", duration_cast<duration<float>>(t1-t0).count(), " s");
+		bim::sendMessage(bim::MessageType::INFO, "Finished BVH structure in ", duration_cast<duration<float>>(t1-t0).count(), " s\n",
+				"    Max. tree depth: ", model.getChunk(ei::IVec3(0))->getNumTreeLevels());
 
 		if(computeAAB) {
 			bim::sendMessage(bim::MessageType::INFO, "computing AABoxes...");

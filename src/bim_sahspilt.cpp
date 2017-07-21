@@ -143,6 +143,7 @@ namespace bim {
 
 		m_hierarchy.reserve(n*2);
 		m_hierarchyParents.reserve(n*2);
+		m_hierarchyLeaves.reserve(n);
 		SAHBuildInfo input = {m_hierarchy, m_hierarchyParents, m_hierarchyLeaves, m_positions,
 			m_triangles, m_triangleMaterials, m_numTrianglesPerLeaf,
 			ids.get(), centers.get(), heuristics.get()};

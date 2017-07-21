@@ -27,6 +27,58 @@ namespace bim {
 		return surface(_bv) * _num;
 	}
 
+	// Two sources to derive the z-order comparator
+	// (floats - unused) http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.150.9547&rep=rep1&type=pdf
+	// (ints - the below one uses this int-algorithm on floats) http://dl.acm.org/citation.cfm?id=545444
+	// http://www.forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations/ Computing morton codes
+	static uint64 partby2(uint16 _x)
+	{
+		uint64 r = _x;
+		r = (r | (r << 16)) & 0x0000ff0000ff;
+		r = (r | (r <<  8)) & 0x00f00f00f00f;
+		r = (r | (r <<  4)) & 0x0c30c30c30c3;
+		r = (r | (r <<  2)) & 0x249249249249;
+		return r;
+	}
+	// Insert two 0 bits before each bit. This transforms a 16 bit number xxxxxxxx into a 48 bit number 00x00x00x00x00x00x00x00x
+	static uint64 morton(uint16 _a, uint16 _b, uint16 _c)
+	{
+		return partby2(_a) | (partby2(_b) << 1) | (partby2(_c) << 2);
+	}
+
+	// Usefull sources for hilber curve implementations:
+	// http://www.tiac.net/~sw/2008/10/Hilbert/moore/ Non recursive c-code
+	// http://stackoverflow.com/questions/8459562/hilbert-sort-by-divide-and-conquer-algorithm Idea with inverse gray code
+	static uint64 binaryToGray(uint64 num)
+	{
+		return num ^ (num >> 1);
+	}
+	static uint64 grayToBinary(uint64 num)
+	{
+		num = num ^ (num >> 32);
+		num = num ^ (num >> 16);
+		num = num ^ (num >> 8);
+		num = num ^ (num >> 4);
+		num = num ^ (num >> 2);
+		num = num ^ (num >> 1);
+		return num;
+	}
+	static bool hilbertcurvecmp(const Vec3& _a, const Vec3& _b)
+	{
+		// Get (positive) integer vectors
+		UVec3 a = UVec3(_a * 4096.0f);
+		UVec3 b = UVec3(_b * 4096.0f);
+		// Interleave packages of 16 bit, convert to inverse Gray code and compare.
+		uint64 codeA = grayToBinary(morton(a.x >> 16, a.y >> 16, a.z >> 16));
+		uint64 codeB = grayToBinary(morton(b.x >> 16, b.y >> 16, b.z >> 16));
+		// If they are equal take the next 16 less significant bit.
+		if(codeA == codeB) {
+			codeA = grayToBinary(morton(a.x & 0xffff, a.y & 0xffff, a.z & 0xffff));
+			codeB = grayToBinary(morton(b.x & 0xffff, b.y & 0xffff, b.z & 0xffff));
+		}
+		return codeA < codeB;
+	}
+
 	// Partitions all triangle into two disjunct sets. Returns the SAH cost for the
 	// split and the index for the last object in the left set.
 	// _min and _max are inclusive boundaries.
@@ -113,6 +165,18 @@ namespace bim {
 				memcpy(_triangles, _in.aux, _num * 4);	// Keep best sorted result
 			}
 		}
+		// Try again with Hilbert curve instead of the main axis.
+		/*std::sort( _in.aux, _in.aux + _num,
+			[&](const uint32 _lhs, const uint32 _rhs) { return hilbertcurvecmp(_in.centers[_lhs], _in.centers[_rhs]); }
+		);
+		uint32 i;
+		float sah = findObjectSplit(_in, _in.aux, _num, i);
+		if(sah < objSplitSAH)
+		{
+			objSplitSAH = sah;
+			splitIndex = i;
+			memcpy(_triangles, _in.aux, _num * 4);	// Keep best sorted result
+		}//*/
 
 		// Build a new index set for the left side
 		std::unique_ptr<uint32[]> tmpIndexSet(new uint32[_num]);

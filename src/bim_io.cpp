@@ -821,6 +821,7 @@ namespace bim {
 		{
 			Json& camNode = camerasNode[cam->name];
 			camNode["type"] = Camera::TypeToString(cam->type);
+			camNode["velocity"] = cam->velocity;
 			switch(cam->type)
 			{
 			case Camera::Type::PERSPECTIVE: {

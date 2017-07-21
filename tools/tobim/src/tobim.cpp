@@ -6,9 +6,12 @@
 #include <assimp/Importer.hpp>
 #include <string>
 //#include <algorithm>
+#include <chrono>
 
 #include "bim/bim.hpp"
 #include "bim/log.hpp"
+
+using namespace std::chrono;
 
 // Assimp logging interfacing
 class LogDebugStream: public Assimp::LogStream {
@@ -25,7 +28,7 @@ class LogErrStream: public Assimp::LogStream {
 };
 
 
-bool loadScene(const std::string& _fileName, Assimp::Importer& _importer)
+bool loadScene(const std::string& _fileName, Assimp::Importer& _importer, bool _flipUV)
 {
 	// Initialize Assimp logger
 	Assimp::DefaultLogger::create("", Assimp::Logger::VERBOSE);
@@ -51,7 +54,7 @@ bool loadScene(const std::string& _fileName, Assimp::Importer& _importer)
 		aiProcess_TransformUVCoords		|
 //		aiProcess_ImproveCacheLocality	|
 //		aiProcess_JoinIdenticalVertices	|
-		aiProcess_FlipUVs );
+		(_flipUV ? aiProcess_FlipUVs : 0) );
 
 	return _importer.GetScene() != nullptr;
 }
@@ -238,6 +241,7 @@ int main(int _numArgs, const char** _args)
 	bool computeAAB = false;
 	bool computeOB = false;
 	bool computeSGGX = false;
+	bool flipUV = false;
 	// Parse arguments now
 	for(int i = 1; i < _numArgs; ++i)
 	{
@@ -254,6 +258,7 @@ int main(int _numArgs, const char** _args)
 			break;
 		case 'c': if(strcmp("SGGX", _args[i] + 2) == 0) computeSGGX = true;
 			break;
+		case 'f': if(strcmp("lipUV", _args[i] + 2) == 0) flipUV = true;
 		default:
 			bim::sendMessage(bim::MessageType::WARNING, "Unknown option in argument ", _args[i]);
 		}
@@ -273,9 +278,15 @@ int main(int _numArgs, const char** _args)
 		outputJsonFile = outputFileName + ".json";
 	}
 
+	auto t0 = high_resolution_clock::now();
+
 	// Import Assimp scene
 	Assimp::Importer importer;
-	if(!loadScene(inputModelFile, importer)) { bim::sendMessage(bim::MessageType::ERROR, "Failed to import the scene with assimp."); return 1; }
+	if(!loadScene(inputModelFile, importer, flipUV))
+	{
+		bim::sendMessage(bim::MessageType::ERROR, "Failed to import the scene with assimp.");
+		return 1;
+	}
 
 	// Analyze input data to create a proper model
 	bim::Property::Val properties = bim::Property::Val(bim::Property::POSITION | bim::Property::TRIANGLE_IDX | bim::Property::TRIANGLE_MAT);
@@ -296,10 +307,11 @@ int main(int _numArgs, const char** _args)
 		numVertices += mesh->mNumVertices;
 		numTriangles += mesh->mNumFaces;
 	}
-	bim::sendMessage(bim::MessageType::INFO, "Finished Assimp loading\n",
-		"    Meshes: ", importer.GetScene()->mNumMeshes, '\n',
-		"    Materials: ", importer.GetScene()->mNumMaterials, '\n',
-		"    Vertices: ", numVertices, '\n',
+	auto t1 = high_resolution_clock::now();
+	bim::sendMessage(bim::MessageType::INFO, "Finished Assimp loading in ", duration_cast<duration<float>>(t1-t0).count() , " s\n",
+		"    Meshes: ", importer.GetScene()->mNumMeshes, "\n",
+		"    Materials: ", importer.GetScene()->mNumMaterials, "\n",
+		"    Vertices: ", numVertices, "\n",
 		"    Triangles: ", numTriangles);
 	bim::BinaryModel model(properties, chunkGridRes);
 	model.loadEnvironmentFile(outputJsonFile.c_str());
@@ -311,9 +323,13 @@ int main(int _numArgs, const char** _args)
 	bim::sendMessage(bim::MessageType::INFO, "importing geometry...");
 	importGeometry(importer.GetScene(), importer.GetScene()->mRootNode, ei::identity4x4(), model);
 	importer.FreeScene();
+	auto t2 = high_resolution_clock::now();
+	bim::sendMessage(bim::MessageType::INFO, "Finished importing geometry to bim in ", duration_cast<duration<float>>(t2-t1).count(), " s");
 	// Compute additional data
 	bim::sendMessage(bim::MessageType::INFO, "recomputing bounding box...");
 	model.refreshBoundingBox();
+	auto t3 = high_resolution_clock::now();
+	bim::sendMessage(bim::MessageType::INFO, "Finished bounding box in ", duration_cast<duration<float>>(t3-t2).count(), " s");
 	//foreach chunk
 	{
 		bim::sendMessage(bim::MessageType::INFO, "removing redundant vertices...");
@@ -321,7 +337,11 @@ int main(int _numArgs, const char** _args)
 		bim::sendMessage(bim::MessageType::INFO, "computing tangent space...");
 		model.getChunk(ei::IVec3(0))->computeTangentSpace(bim::Property::Val(bim::Property::NORMAL | bim::Property::TANGENT | bim::Property::BITANGENT), true);
 		bim::sendMessage(bim::MessageType::INFO, "building BVH...");
+		t0 = high_resolution_clock::now();
 		model.getChunk(ei::IVec3(0))->buildHierarchy(method);
+		t1 = high_resolution_clock::now();
+		bim::sendMessage(bim::MessageType::INFO, "Finished BVH structure in ", duration_cast<duration<float>>(t1-t0).count(), " s");
+
 		if(computeAAB) {
 			bim::sendMessage(bim::MessageType::INFO, "computing AABoxes...");
 			model.getChunk(ei::IVec3(0))->computeBVHAABoxes();
@@ -334,6 +354,9 @@ int main(int _numArgs, const char** _args)
 			bim::sendMessage(bim::MessageType::INFO, "computing SGGX NDFs...");
 			model.getChunk(ei::IVec3(0))->computeBVHSGGXApproximations();
 		}
+
+		t2 = high_resolution_clock::now();
+		bim::sendMessage(bim::MessageType::INFO, "Finished BVH nodes in ", duration_cast<duration<float>>(t2-t1).count(), " s");
 	}
 	// Set an accelerator if possible. Prefer AABOX (last line will win if multiple BVH are given)
 	if(computeOB) model.setAccelerator(bim::Property::OBOX_BVH);

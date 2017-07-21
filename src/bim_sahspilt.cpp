@@ -17,6 +17,7 @@ namespace bim {
 		const uint numTrianglesPerLeaf;
 		uint32* sortedIDs;
 		Vec4* centers; // position .xyz and projection in .w
+		Vec2* heuristics; // auxiliary buffer for left/right heuristic pairs
 	};
 
 	static float surfaceAreaHeuristic(const Box& _bv, int _num)
@@ -88,24 +89,23 @@ namespace bim {
 
 		// Compute lhs/rhs bounding volumes for all splits. This is done from left
 		// and right adding one triangle at a time.
-		std::unique_ptr<Vec2[]> heuristics(new Vec2[_max - _min]);
 		UVec3 t = _in.triangles[_in.sortedIDs[_min]];
 		Box leftBox = Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]));
 		t = _in.triangles[_in.sortedIDs[_max]];
 		Box rightBox = Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]));
-		heuristics[0].x   = surfaceAreaHeuristic( leftBox, 1 );
-		heuristics[_max-_min-1].y = surfaceAreaHeuristic( rightBox, 1 );
-		for(uint32 i = _min + 1; i < _max; ++i)
+		_in.heuristics[0].x   = surfaceAreaHeuristic( leftBox, 1 );
+		_in.heuristics[_max-_min-1].y = surfaceAreaHeuristic( rightBox, 1 );
+		for(uint32 i = 1; i < _max-_min; ++i)
 		{
 			// Extend bounding boxes by one triangle
-			t = _in.triangles[_in.sortedIDs[i]];
+			t = _in.triangles[_in.sortedIDs[i+_min]];
 			leftBox = Box(leftBox, Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z])));
-			t = _in.triangles[_in.sortedIDs[_max-i+_min]];
+			t = _in.triangles[_in.sortedIDs[_max-i]];
 			rightBox = Box(rightBox, Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z])));
 			// The volumes are rejected in the next iteration but remember
 			// the result for the split decision.
-			heuristics[i-_min].x   = surfaceAreaHeuristic( leftBox, i-_min+1 );
-			heuristics[_max-i-1].y = surfaceAreaHeuristic( rightBox, i-_min+1 );
+			_in.heuristics[i].x   = surfaceAreaHeuristic( leftBox, i+1 );
+			_in.heuristics[_max-_min-i-1].y = surfaceAreaHeuristic( rightBox, i+1 );
 		}
 
 		// Find the minimum for the current dimension
@@ -113,9 +113,9 @@ namespace bim {
 		float minCost = std::numeric_limits<float>::infinity();
 		for(uint32 i = 0; i < (_max-_min); ++i)
 		{
-			if(sum(heuristics[i]) < minCost)
+			if(sum(_in.heuristics[i]) < minCost)
 			{
-				minCost = sum(heuristics[i]);
+				minCost = sum(_in.heuristics[i]);
 				m = i + _min;
 			}
 		}
@@ -133,6 +133,7 @@ namespace bim {
 		uint32 n = getNumTriangles();
 		std::unique_ptr<Vec4[]> centers(new Vec4[n]);
 		std::unique_ptr<uint32[]> ids(new uint32[n]);
+		std::unique_ptr<Vec2[]> heuristics(new Vec2[n-1]); // n-1 split positions
 		for( uint32 i = 0; i < n; ++i )
 		{
 			ids[i] = i;
@@ -144,7 +145,7 @@ namespace bim {
 		m_hierarchyParents.reserve(n*2);
 		SAHBuildInfo input = {m_hierarchy, m_hierarchyParents, m_hierarchyLeaves, m_positions,
 			m_triangles, m_triangleMaterials, m_numTrianglesPerLeaf,
-			ids.get(), centers.get()};
+			ids.get(), centers.get(), heuristics.get()};
 		build(input, 0, n-1);
 	}
 

@@ -343,7 +343,7 @@ int main(int _numArgs, const char** _args)
 		bim::sendMessage(bim::MessageType::INFO, "Finished BVH structure in ", duration_cast<duration<float>>(t1-t0).count(), " s\n",
 				"    Max. tree depth: ", model.getChunk(ei::IVec3(0))->getNumTreeLevels());
 
-		if(computeAAB) {
+		if(computeAAB && method != bim::Chunk::BuildMethod::SBVH) {
 			bim::sendMessage(bim::MessageType::INFO, "computing AABoxes...");
 			model.getChunk(ei::IVec3(0))->computeBVHAABoxes();
 		}

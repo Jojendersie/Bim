@@ -1,16 +1,26 @@
+#define DEBUG
 #include "bim/chunk.hpp"
 #include <memory>
 #include <algorithm>
+#include "bim/log.hpp"
 
 using namespace ei;
 
 namespace bim {
+
+	struct Bin
+	{
+		Box bbox;
+		uint32 numStart;
+		uint32 numEnd;
+	};
 
 	struct SBVBuildInfo
 	{
 		std::vector<Node>& hierarchy;
 		std::vector<uint32>& parents;
 		std::vector<UVec4>& leaves;
+		std::vector<Box>& aaBoxes;
 		const std::vector<Vec3>& positions;
 		const std::vector<UVec3>& triangles;
 		const std::vector<uint32>& materials;
@@ -18,6 +28,8 @@ namespace bim {
 		Vec3* centers; // triangle center position .xyz
 		Vec2* heuristics; // auxiliary buffer for left/right heuristic pairs
 		uint32* aux; // auxiliary work space 1
+		Bin * bins;
+		float rootSurface;
 	};
 
 	const uint NUM_BINS = 256;
@@ -79,10 +91,43 @@ namespace bim {
 		return codeA < codeB;
 	}
 
+
+	// Get the bounding box of a clipped triangle
+	static Box clippedBox(const Vec3& _a, const Vec3& _b, const Vec3& _c, int _dim, float _l, float _r)
+	{
+		Vec3 points[6] = {_a, _b, _a, _c, _b, _c};
+		uint n = 0;
+		// Clip each edge against both planes
+		for(int i = 0; i < 6; i+=2)
+		{
+			const Vec3& a = points[i];
+			const Vec3& b = points[i+1];
+			if((a[_dim] >= _l || b[_dim] >= _l) && (a[_dim] <= _r || b[_dim] <= _r)) // Edge fully on one side? -> skip
+			{
+				Vec3 e = b - a;
+				if(a[_dim] < _l) points[n] = a + e * ((_l - a[_dim]) / e[_dim]);
+				else if(a[_dim] > _r) points[n] = a + e * ((_r - a[_dim]) / e[_dim]);
+				else points[n] = a;
+				if(b[_dim] < _l) points[n+1] = b + e * ((_l - b[_dim]) / e[_dim]);
+				else if(b[_dim] > _r) points[n+1] = b + e * ((_r - b[_dim]) / e[_dim]);
+				else points[n+1] = b;
+				n += 2;
+			}
+		}
+
+		return Box(points, n);
+	}
+
+	static Box unionBox(const Box& _a, const Box& _b)
+	{
+		return Box(max(_a.min, _b.min), min(_a.max, _b.max));
+	}
+
+
 	// Partitions all triangle into two disjunct sets. Returns the SAH cost for the
 	// split and the index for the last object in the left set.
 	// _min and _max are inclusive boundaries.
-	static float findObjectSplit( SBVBuildInfo& _in, uint32* _triangles, uint32 _num, uint32& _outIdx )
+	static float findObjectSplit( SBVBuildInfo& _in, uint32* _triangles, uint32 _num, uint32& _outIdx, const Box& _parentBox )
 	{
 		// Compute lhs/rhs bounding volumes for all splits. This is done from left
 		// and right adding one triangle at a time.
@@ -90,8 +135,8 @@ namespace bim {
 		Box leftBox = Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]));
 		t = _in.triangles[_triangles[_num-1]];
 		Box rightBox = Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]));
-		_in.heuristics[0].x   = surfaceAreaHeuristic( leftBox, 1 );
-		_in.heuristics[_num-2].y = surfaceAreaHeuristic( rightBox, 1 );
+		_in.heuristics[0].x   = surfaceAreaHeuristic( unionBox(_parentBox, leftBox), 1 );
+		_in.heuristics[_num-2].y = surfaceAreaHeuristic( unionBox(_parentBox, rightBox), 1 );
 		for(uint32 i = 1; i < _num-1; ++i)
 		{
 			// Extend bounding boxes by one triangle
@@ -101,8 +146,8 @@ namespace bim {
 			rightBox = Box(rightBox, Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z])));
 			// The volumes are rejected in the next iteration but remember
 			// the result for the split decision.
-			_in.heuristics[i].x   = surfaceAreaHeuristic( leftBox, i+1 );
-			_in.heuristics[_num-i-2].y = surfaceAreaHeuristic( rightBox, i+1 );
+			_in.heuristics[i].x   = surfaceAreaHeuristic( unionBox(_parentBox, leftBox), i+1 );
+			_in.heuristics[_num-i-2].y = surfaceAreaHeuristic( unionBox(_parentBox, rightBox), i+1 );
 		}
 
 		// Find the minimum for the current dimension
@@ -119,12 +164,13 @@ namespace bim {
 		return minCost;
 	}
 
-	static uint32 build( SBVBuildInfo& _in, uint32* _triangles, uint32 _num )
+	static uint32 build( SBVBuildInfo& _in, uint32* _triangles, uint32 _num, const Box& _aab )
 	{
 		uint32 nodeIdx = (uint32)_in.hierarchy.size();
 		_in.hierarchy.resize(nodeIdx + 1);
 		_in.parents.resize(nodeIdx + 1);
 		_in.hierarchy[nodeIdx].firstChild = _in.hierarchy[nodeIdx].escape = _in.parents[nodeIdx] = 0;
+		_in.aaBoxes.push_back(_aab);
 
 		// Create a leaf if less than NUM_PRIMITIVES elements remain.
 		eiAssert(_num > 0, "Node without triangles!");
@@ -157,7 +203,7 @@ namespace bim {
 			);
 
 			uint32 i;
-			float sah = findObjectSplit(_in, _in.aux, _num, i);
+			float sah = findObjectSplit(_in, _in.aux, _num, i, _aab);
 			if(sah < objSplitSAH)
 			{
 				objSplitSAH = sah;
@@ -170,7 +216,7 @@ namespace bim {
 			[&](const uint32 _lhs, const uint32 _rhs) { return hilbertcurvecmp(_in.centers[_lhs], _in.centers[_rhs]); }
 		);
 		uint32 i;
-		float sah = findObjectSplit(_in, _in.aux, _num, i);
+		float sah = findObjectSplit(_in, _in.aux, _num, i, _aab);
 		if(sah < objSplitSAH)
 		{
 			objSplitSAH = sah;
@@ -178,26 +224,186 @@ namespace bim {
 			memcpy(_triangles, _in.aux, _num * 4);	// Keep best sorted result
 		}//*/
 
+		// Get the bounding boxes for the optimal object split.
+		Box optLeftBox, optRightBox; // The child bounding boxes for the optimal solution
+		UVec3 t = _in.triangles[_triangles[0]];
+		optLeftBox = Box(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]);
+		t = _in.triangles[_triangles[_num-1]];
+		optRightBox = Box(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]);
+		for(uint32 i = 1; i < splitIndex+1; ++i)
+			t = _in.triangles[_triangles[i]],
+			optLeftBox = Box(optLeftBox, Box(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]));
+		for(uint32 i = splitIndex+1; i < _num-1; ++i)
+			t = _in.triangles[_triangles[i]],
+			optRightBox = Box(optRightBox, Box(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]));
+
+		// Reduce number of splittings with some special conditions:
+		// * only a few triangles
+		// * objSplit overlap is not too bad (TODO)
+		bool forceObjSplit = _num < _in.numTrianglesPerLeaf * 4
+			|| (surface(unionBox(optLeftBox, optRightBox)) / _in.rootSurface <= 2e-5f);
+
+		uint32 binSplitDim = 1000;
+		float binSplitPlane = 0.0f;
+		float binSplitSAH = objSplitSAH; // Only consider better solutions than the objsplit
+		if(!forceObjSplit)
+		for(int d = 0; d < 3; ++d)
+		{
+			// Try pure spatial subdivision with object duplication.
+			// Use binning to compute a fixed number of reasonable split planes.
+			// Each bin contains the bounding box for contained triangles, clipped at the
+			// splitting planes, and two numbers to count references.
+			float dimMin = _aab.min[d];
+			float dimMax = _aab.max[d];
+			if(approx(dimMin, dimMax)) continue; // Skip degenerated dimensions
+			float binWidth = (dimMax - dimMin) / NUM_BINS;
+			// Clear bin to a state without bbox
+			for(int b = 0; b < NUM_BINS; ++b)
+			{
+				_in.bins[b].numStart = 0; _in.bins[b].numEnd = 0;
+				_in.bins[b].bbox.min = Vec3(INF);
+				_in.bins[b].bbox.max = Vec3(-INF);
+			}
+			// Insert the triangles to all relevant bins
+			for(uint32 i = 0; i < _num; ++i)
+			{
+				UVec3 t = _in.triangles[_triangles[i]];
+				float tmin = min(_in.positions[t.x][d], _in.positions[t.y][d], _in.positions[t.z][d]);
+				float tmax = max(_in.positions[t.x][d], _in.positions[t.y][d], _in.positions[t.z][d]);
+				int binMin = clamp(ei::floor((tmin - dimMin) / binWidth), 0, int(NUM_BINS)-1);
+				int binMax = clamp(ei::floor((tmax - dimMin) / binWidth), 0, int(NUM_BINS)-1);
+				// Make sure special cases are treated correct:
+				// On boundary -> left bin only
+				// Touches from left -> left bin only
+				// Touches from right -> right bin only
+				float splitPlane = dimMin + binWidth * (binMin+1);
+				if(tmin >= splitPlane && tmax > splitPlane) binMin = min(binMin+1, int(NUM_BINS)-1);
+				splitPlane = dimMin + binWidth * binMax;
+				if(tmin <= splitPlane && tmax <= splitPlane) binMax = max(binMin, binMax-1);
+				eiAssert(binMin >= 0 && binMin < NUM_BINS, "Invalid bin index.");
+				eiAssert(binMax >= 0 && binMax < NUM_BINS, "Invalid bin index.");
+
+				_in.bins[binMin].numStart++;
+				_in.bins[binMax].numEnd++;
+				for(int b = binMin; b <= binMax; ++b)
+					_in.bins[b].bbox = Box(_in.bins[b].bbox, clippedBox(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z], d,
+						dimMin + binWidth * b,
+						(b == NUM_BINS-1) ? dimMax : dimMin + binWidth * (b+1))); // Numerical problems force us to use the real boundary of the last bucket instead of the computed one
+			}
+			// The boxes are only restricted in binning dimension, make sure to not increase
+			// the box through triangles which are referenced from different nodes.
+			for(int b = 0; b < NUM_BINS; ++b)
+				_in.bins[b].bbox = unionBox(_aab, _in.bins[b].bbox);
+			// TODO: remove double references like in the paper
+			// Find cost for spatial splitting.
+			Box leftBox = _in.bins[0].bbox;
+			Box rightBox = _in.bins[NUM_BINS-1].bbox;
+			uint32 numLeft = _in.bins[0].numStart;
+			uint32 numRight = _in.bins[NUM_BINS-1].numEnd;
+			_in.heuristics[0].x			 = surfaceAreaHeuristic( leftBox, numLeft );
+			_in.heuristics[NUM_BINS-2].y = surfaceAreaHeuristic( rightBox, numRight );
+			// Use aux to track the total number of references through the splitting
+			for(uint i = 0; i < NUM_BINS; ++i) _in.aux[i] = 0;
+			_in.aux[0] = numLeft;
+			_in.aux[NUM_BINS-2] = numRight;
+			for(uint i = 1; i < NUM_BINS-1; ++i)
+			{
+				leftBox = Box(leftBox, _in.bins[i].bbox);
+				rightBox = Box(rightBox, _in.bins[NUM_BINS-i-1].bbox);
+				numLeft += _in.bins[i].numStart;
+				numRight += _in.bins[NUM_BINS-i-1].numEnd;
+				_in.heuristics[i].x = numLeft < _num ? surfaceAreaHeuristic( leftBox, numLeft ) : INF;
+				_in.heuristics[NUM_BINS-i-2].y = numRight < _num ? surfaceAreaHeuristic( rightBox, numRight ) : INF;
+				_in.aux[i] += numLeft;
+				_in.aux[NUM_BINS-i-2] += numRight;
+			}
+			// Find the minimum for binned splitting
+			uint splitBin = 0;
+			for(uint32 i = 0; i < NUM_BINS-1; ++i)
+			{
+				if(sum(_in.heuristics[i]) < binSplitSAH
+					&& _in.aux[i]*3 < _num*4 ) // Do not allow more than 33% reference duplication in one step
+				{
+					binSplitSAH = sum(_in.heuristics[i]);
+					binSplitDim = d;
+					splitBin = i;
+				}
+			}
+
+			// Get the bounding boxes for the optimal split (intermediate information
+			// are discarded after each dimension -> do it inside the loop).
+			if(binSplitDim == d)
+			{
+				binSplitPlane = dimMin + binWidth * (splitBin+1);
+				optLeftBox = _in.bins[0].bbox;
+				optRightBox = _in.bins[NUM_BINS-1].bbox;
+				for(uint i = 1; i < splitBin+1; ++i)
+					optLeftBox = Box(optLeftBox, _in.bins[i].bbox);
+				for(uint i = splitBin+1; i < NUM_BINS-1; ++i)
+					optRightBox = Box(optRightBox, _in.bins[i].bbox);
+				eiAssert(optLeftBox.min != optRightBox.min || optLeftBox.max != optRightBox.max, "Spatial split must divide the space.");
+			}
+		}
+
+		bool useObjSplit = objSplitSAH <= binSplitSAH;
+
 		// Build a new index set for the left side
 		std::unique_ptr<uint32[]> tmpIndexSet(new uint32[_num]);
-		memcpy(tmpIndexSet.get(), _triangles, (splitIndex+1) * 4);
+		uint32 n = 0;
+		if(useObjSplit)
+		{
+			n = splitIndex+1;
+			memcpy(tmpIndexSet.get(), _triangles, n * 4);
+		} else {
+			// Get all triangles which start before the split plane
+			n = 0;
+			for(uint32 i = 0; i < _num; ++i)
+			{
+				UVec3 t = _in.triangles[_triangles[i]];
+				float tmin = min(_in.positions[t.x][binSplitDim], _in.positions[t.y][binSplitDim], _in.positions[t.z][binSplitDim]);
+				float tmax = max(_in.positions[t.x][binSplitDim], _in.positions[t.y][binSplitDim], _in.positions[t.z][binSplitDim]);
+				if(tmin < binSplitPlane || tmax <= binSplitPlane) // Must start truly in bucket or be on boundary
+					tmpIndexSet[n++] = _triangles[i];
+			}
+		}
 		// Set left and right into firstChild and escape. This is corrected later in
 		// remapNodePointers().
-		_in.hierarchy[nodeIdx].firstChild = build( _in, tmpIndexSet.get(), splitIndex+1 );
-		// Bulid index set for the right side
-		memcpy(tmpIndexSet.get(), _triangles + splitIndex + 1, (_num - splitIndex - 1) * 4);
-		_in.hierarchy[nodeIdx].escape = build( _in, tmpIndexSet.get(), _num - splitIndex - 1 );
+		_in.hierarchy[nodeIdx].firstChild = build( _in, tmpIndexSet.get(), n, optLeftBox );
+		// Build index set for the right side
+		if(useObjSplit)
+		{
+			n = _num - splitIndex - 1;
+			memcpy(tmpIndexSet.get(), _triangles + splitIndex + 1, n * 4);
+		} else {
+			// Get all triangles which end after the split plane
+			n = 0;
+			for(uint32 i = 0; i < _num; ++i)
+			{
+				UVec3 t = _in.triangles[_triangles[i]];
+				float tmax = max(_in.positions[t.x][binSplitDim], _in.positions[t.y][binSplitDim], _in.positions[t.z][binSplitDim]);
+				if(tmax > binSplitPlane)
+					tmpIndexSet[n++] = _triangles[i];
+			}
+		}
+		_in.hierarchy[nodeIdx].escape = build( _in, tmpIndexSet.get(), n, optRightBox );
 
 		return nodeIdx;
 	}
 
 	void Chunk::buildBVH_SBVH()
 	{
+		Vec3 a(0.0f, 0.0f, 0.0f);
+		Vec3 b(1.0f, 0.0f, 0.0f);
+		Vec3 c(0.0f, 1.0f, 0.0f);
+		Box box(Vec3(0.5f, -1.0f, -1.0f), Vec3(1.5f, 1.0f, 1.0f));
+		Box res = clippedBox(a, b, c, 0, 0.5f, 0.75f);
+
 		uint32 n = getNumTriangles();
 		std::unique_ptr<Vec3[]> centers(new Vec3[n]);
-		std::unique_ptr<Vec2[]> heuristics(new Vec2[ei::max(NUM_BINS,n-1)]); // n-1 split positions
-		std::unique_ptr<uint32[]> auxA(new uint32[n]);
+		std::unique_ptr<Vec2[]> heuristics(new Vec2[max(NUM_BINS,n-1)]); // n-1 split positions
+		std::unique_ptr<uint32[]> auxA(new uint32[max(NUM_BINS,n)]);
 		std::unique_ptr<uint32[]> indices(new uint32[n]);
+		std::unique_ptr<Bin[]> bins(new Bin[NUM_BINS]);
 
 		// Initialize unsorted and centers
 		for( uint32 i = 0; i < n; ++i )
@@ -209,11 +415,16 @@ namespace bim {
 
 		m_hierarchy.reserve(n*2);
 		m_hierarchyParents.reserve(n*2);
+		m_aaBoxes.reserve(n*2);
 		m_hierarchyLeaves.reserve(n);
 		SBVBuildInfo input = {m_hierarchy, m_hierarchyParents, m_hierarchyLeaves,
-			m_positions, m_triangles, m_triangleMaterials, m_numTrianglesPerLeaf,
-			centers.get(), heuristics.get(), auxA.get()};
-		build(input, indices.get(), n);
+			m_aaBoxes, m_positions, m_triangles, m_triangleMaterials,
+			m_numTrianglesPerLeaf, centers.get(), heuristics.get(),
+			auxA.get(), bins.get(), surface(m_boundingBox)};
+		build(input, indices.get(), n, m_boundingBox);
+		m_properties = Property::Val(m_properties | Property::AABOX_BVH);
+
+		bim::sendMessage(MessageType::INFO, "SBVH split produced ", m_hierarchyLeaves.size() / float(n) * 100.0f, " % references.");
 	}
 
 } // namespace bim

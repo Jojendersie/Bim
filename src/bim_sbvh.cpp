@@ -153,7 +153,8 @@ namespace bim {
 		// Find the minimum for the current dimension
 		_outIdx = 0;
 		float minCost = std::numeric_limits<float>::infinity();
-		for(uint32 i = 0; i < _num-1; ++i)
+		bool skip1 = _in.numTrianglesPerLeaf > 2; // Disallow nodes with 1 triangle if possible
+		for(uint32 i = (skip1?1:0); i < _num-(skip1?2:1); ++i)
 		{
 			if(sum(_in.heuristics[i]) < minCost)
 			{
@@ -241,8 +242,8 @@ namespace bim {
 		// Reduce number of splittings with some special conditions:
 		// * only a few triangles
 		// * objSplit overlap is not too bad (TODO)
-		bool forceObjSplit = true//_num < _in.numTrianglesPerLeaf * 4
-			|| (surface(unionBox(optLeftBox, optRightBox)) / _in.rootSurface <= 2e-5f);
+		bool forceObjSplit = _num < _in.numTrianglesPerLeaf * 3
+			|| (surface(unionBox(optLeftBox, optRightBox)) / _in.rootSurface <= 1e-4f);
 
 		uint32 binSplitDim = 1000;
 		float binSplitPlane = 0.0f;

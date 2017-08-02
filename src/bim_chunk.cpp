@@ -9,7 +9,6 @@ namespace bim {
 		m_address(0),
 		m_properties(Property::DONT_CARE),
 		m_boundingBox(ei::Vec3(0.0f), ei::Vec3(0.0f)),
-		m_numTrianglesPerLeaf(0),
 		m_numTreeLevels(0)
 	{
 	}
@@ -224,19 +223,18 @@ namespace bim {
 		sendMessage(MessageType::INFO, "found ", numInvalidTriangles, " invalid triangles after removing redundant vertices.");
 	}
 
-	void Chunk::buildHierarchy(BuildMethod _method)
+	void Chunk::buildHierarchy(BuildMethod _method, uint _maxNumTrianglesPerLeaf)
 	{
-		m_numTrianglesPerLeaf = m_parent->getMaxNumTrianglesPerLeaf();
 		switch(_method)
 		{
 		case BuildMethod::KD_TREE:
-			buildBVH_kdtree();
+			buildBVH_kdtree(_maxNumTrianglesPerLeaf);
 			break;
 		case BuildMethod::SAH:
-			buildBVH_SAHsplit();
+			buildBVH_SAHsplit(_maxNumTrianglesPerLeaf);
 			break;
 		case BuildMethod::SBVH:
-			buildBVH_SBVH();
+			buildBVH_SBVH(_maxNumTrianglesPerLeaf);
 			break;
 		}
 

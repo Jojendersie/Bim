@@ -236,7 +236,7 @@ int main(int _numArgs, const char** _args)
 	// Analyze all input arguments and store results in some variables
 	std::string inputModelFile;
 	std::string outputFileName;
-	bim::Chunk::BuildMethod method = bim::Chunk::BuildMethod::SBVH;
+	bim::Chunk::BuildMethod method = bim::Chunk::BuildMethod::KD_TREE;
 	ei::IVec3 chunkGridRes(1);
 	bool computeAAB = false;
 	bool computeOB = false;
@@ -338,7 +338,7 @@ int main(int _numArgs, const char** _args)
 		model.getChunk(ei::IVec3(0))->computeTangentSpace(bim::Property::Val(bim::Property::NORMAL | bim::Property::TANGENT | bim::Property::BITANGENT), true);
 		bim::sendMessage(bim::MessageType::INFO, "building BVH...");
 		t0 = high_resolution_clock::now();
-		model.getChunk(ei::IVec3(0))->buildHierarchy(method);
+		model.getChunk(ei::IVec3(0))->buildHierarchy(method, 2);
 		t1 = high_resolution_clock::now();
 		bim::sendMessage(bim::MessageType::INFO, "Finished BVH structure in ", duration_cast<duration<float>>(t1-t0).count(), " s\n",
 				"    Max. tree depth: ", model.getChunk(ei::IVec3(0))->getNumTreeLevels());

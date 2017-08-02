@@ -391,7 +391,7 @@ namespace bim {
 		return nodeIdx;
 	}
 
-	void Chunk::buildBVH_SBVH()
+	void Chunk::buildBVH_SBVH(uint _maxNumTrianglesPerLeaf)
 	{
 		Vec3 a(0.0f, 0.0f, 0.0f);
 		Vec3 b(1.0f, 0.0f, 0.0f);
@@ -420,7 +420,7 @@ namespace bim {
 		m_hierarchyLeaves.reserve(n);
 		SBVBuildInfo input = {m_hierarchy, m_hierarchyParents, m_hierarchyLeaves,
 			m_aaBoxes, m_positions, m_triangles, m_triangleMaterials,
-			m_numTrianglesPerLeaf, centers.get(), heuristics.get(),
+			_maxNumTrianglesPerLeaf, centers.get(), heuristics.get(),
 			auxA.get(), bins.get(), surface(m_boundingBox)};
 		build(input, indices.get(), n, m_boundingBox);
 		m_properties = Property::Val(m_properties | Property::AABOX_BVH);

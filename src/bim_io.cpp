@@ -52,13 +52,13 @@ namespace bim {
 	{
 		ei::IVec3 numChunks;	// Number of stored chunks
 		ei::Box boundingBox;	// Entire scene bounding box
-		uint numTrianglesPerLeaf;
+		uint numTrianglesPerLeaf; // [DEPRECATED]
 	};
 
 	struct ChunkMetaSection
 	{
 		ei::Box boundingBox;
-		uint numTrianglesPerLeaf;
+		uint numTrianglesPerLeaf; // [DEPRECATED]
 		uint numTreeLevels;
 	};
 
@@ -271,7 +271,6 @@ namespace bim {
 							ChunkMetaSection meta;
 							m_file.read(reinterpret_cast<char*>(&meta), sizeof(ChunkMetaSection));
 							m_chunks[idx].m_boundingBox = meta.boundingBox;
-							m_chunks[idx].m_numTrianglesPerLeaf = meta.numTrianglesPerLeaf;
 							m_chunks[idx].m_numTreeLevels = meta.numTreeLevels;
 							break; }
 						case Property::POSITION: loadFileChunk(m_file, header, m_chunks[idx].m_positions, m_chunks[idx].m_properties, Property::POSITION); break;
@@ -392,7 +391,6 @@ namespace bim {
 		header.uncompressedSize = 0;
 		ChunkMetaSection meta;
 		meta.boundingBox = m_chunks[idx].m_boundingBox;
-		meta.numTrianglesPerLeaf = m_chunks[idx].m_numTrianglesPerLeaf;
 		meta.numTreeLevels = m_chunks[idx].m_numTreeLevels;
 		file.write(reinterpret_cast<const char*>(&header), sizeof(SectionHeader));
 		file.write(reinterpret_cast<const char*>(&meta), sizeof(ChunkMetaSection));

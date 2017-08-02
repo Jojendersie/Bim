@@ -166,7 +166,7 @@ namespace bim {
 			SBVH,		///< "Spatial Splits in Bounding Volume Hierarchies". Results in more nodes with less overlap by partial reference duplication. Other than that it uses SAH too.
 		};
 		/// Build a hierarchy on top of all triangles
-		void buildHierarchy(BuildMethod _method);
+		void buildHierarchy(BuildMethod _method, uint _maxNumTrianglesPerLeaf);
 		/// Compute bounding volumes for all nodes in the hierarchy.
 		void computeBVHAABoxes();
 		void computeBVHOBoxes();
@@ -197,7 +197,6 @@ namespace bim {
 		std::vector<ei::Box> m_aaBoxes;
 		std::vector<ei::OBox> m_oBoxes;
 		std::vector<SGGX> m_nodeNDFs;
-		uint m_numTrianglesPerLeaf;
 		uint m_numTreeLevels;
 
 		// Allocate space for a certain property and initialize to defaults.
@@ -210,9 +209,9 @@ namespace bim {
 		// Flip qormals to align them within each triangle.
 		void unifyQormals();
 
-		void buildBVH_kdtree();
-		void buildBVH_SAHsplit();
-		void buildBVH_SBVH();
+		void buildBVH_kdtree(uint _maxNumTrianglesPerLeaf);
+		void buildBVH_SAHsplit(uint _maxNumTrianglesPerLeaf);
+		void buildBVH_SBVH(uint _maxNumTrianglesPerLeaf);
 		// All build methods must write left->firstChild and right->escape. After
 		// the primary build the remap iterates the tree once and replaces all pointers
 		// by the correct ones.

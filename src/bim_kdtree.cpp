@@ -48,21 +48,23 @@ namespace bim {
 		_in.hierarchy[nodeIdx].firstChild = _in.hierarchy[nodeIdx].escape = _in.parents[nodeIdx] = 0;
 
 		// Create a leaf if less than NUM_PRIMITIVES elements remain.
-		eiAssert(_min <= _max, "Node without triangles!");
-		if( (_max - _min) < _in.numTrianglesPerLeaf )
+		uint32 num = _max - _min + 1;
+		eiAssert(num > 0, "Node without triangles!");
+		if( num <= _in.numTrianglesPerLeaf )
 		{
 			// Allocate a new leaf
 			size_t leafIdx = _in.leaves.size();
-			_in.leaves.resize(_in.leaves.size() + _in.numTrianglesPerLeaf);
-			// Fill it
+			_in.leaves.resize(_in.leaves.size() + num);
+			// Fill it, use a flag in the materials index to signal that there
+			// are more triangles following. If the flag is not set the current
+			// triangle is the last one.
 			UVec4* trianglesPtr = &_in.leaves[leafIdx];
-			for( uint i = _min; i <= _max; ++i )
-				*(trianglesPtr++) = UVec4( _in.triangles[_in.sorted[0][i]], _in.materials.empty() ? 0 : _in.materials[_in.sorted[0][i]] );
-			for( uint i = 0; i < _in.numTrianglesPerLeaf - (_max - _min + 1); ++i )
-				*(trianglesPtr++) = UVec4(0); // Invalid triangle per convention
+			for( uint i = _min; i < _max; ++i )
+				*(trianglesPtr++) = UVec4( _in.triangles[_in.sorted[0][i]], (_in.materials.empty() ? 0 : _in.materials[_in.sorted[0][i]]) | 0x10000000);
+			*(trianglesPtr++) = UVec4( _in.triangles[_in.sorted[0][_max]], _in.materials.empty() ? 0 : _in.materials[_in.sorted[0][_max]]);
 
 			// Let the new node pointing to this leaf
-			_in.hierarchy[nodeIdx].firstChild = 0x80000000 | (uint32)(leafIdx / _in.numTrianglesPerLeaf);
+			_in.hierarchy[nodeIdx].firstChild = 0x80000000 | (uint32)(leafIdx);
 
 			return nodeIdx;
 		}
@@ -111,7 +113,7 @@ namespace bim {
 		return nodeIdx;
 	}
 
-	void Chunk::buildBVH_kdtree()
+	void Chunk::buildBVH_kdtree(uint _maxNumTrianglesPerLeaf)
 	{
 		uint32 n = getNumTriangles();
 		std::unique_ptr<Vec3[]> centers(new Vec3[n]);
@@ -146,7 +148,7 @@ namespace bim {
 		m_hierarchy.reserve(n*2);
 		m_hierarchyParents.reserve(n*2);
 		KDTreeBuildInfo input = {m_hierarchy, m_hierarchyParents, m_hierarchyLeaves,
-			m_triangles, m_triangleMaterials, m_numTrianglesPerLeaf,
+			m_triangles, m_triangleMaterials, _maxNumTrianglesPerLeaf,
 			sorted, centers.get()};
 		build(input, 0, n-1);
 	}

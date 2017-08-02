@@ -10,8 +10,7 @@ namespace bim {
 		m_chunks(prod(max(_numChunks, ei::IVec3(1)))),
 		m_requestedProps(Property::Val(_properties | Property::POSITION | Property::TRIANGLE_IDX)),
 		m_accelerator(Property::DONT_CARE),
-		m_loadAll(false),
-		m_maxNumTrianglesPerLeaf(2)
+		m_loadAll(false)
 	{
 		for(int i = 0; i < prod(m_numChunks); ++i)
 		{

@@ -236,12 +236,13 @@ int main(int _numArgs, const char** _args)
 	// Analyze all input arguments and store results in some variables
 	std::string inputModelFile;
 	std::string outputFileName;
-	bim::Chunk::BuildMethod method = bim::Chunk::BuildMethod::KD_TREE;
+	bim::Chunk::BuildMethod method = bim::Chunk::BuildMethod::SBVH;
 	ei::IVec3 chunkGridRes(1);
 	bool computeAAB = false;
 	bool computeOB = false;
 	bool computeSGGX = false;
 	bool flipUV = false;
+	uint maxNumTrianglesPerLeaf = 2;
 	// Parse arguments now
 	for(int i = 1; i < _numArgs; ++i)
 	{
@@ -259,6 +260,9 @@ int main(int _numArgs, const char** _args)
 		case 'c': if(strcmp("SGGX", _args[i] + 2) == 0) computeSGGX = true;
 			break;
 		case 'f': if(strcmp("lipUV", _args[i] + 2) == 0) flipUV = true;
+			break;
+		case 't': maxNumTrianglesPerLeaf = atoi(_args[i] + 2);
+			break;
 		default:
 			bim::sendMessage(bim::MessageType::WARNING, "Unknown option in argument ", _args[i]);
 		}
@@ -315,8 +319,6 @@ int main(int _numArgs, const char** _args)
 		"    Triangles: ", numTriangles);
 	bim::BinaryModel model(properties, chunkGridRes);
 	model.loadEnvironmentFile(outputJsonFile.c_str());
-	// TODO: argument
-	model.setMaxNumTrianglesPerLeaf(2);
 	// Fill the model with data
 	bim::sendMessage(bim::MessageType::INFO, "importing materials...");
 	importMaterials(importer.GetScene(), model);
@@ -338,7 +340,7 @@ int main(int _numArgs, const char** _args)
 		model.getChunk(ei::IVec3(0))->computeTangentSpace(bim::Property::Val(bim::Property::NORMAL | bim::Property::TANGENT | bim::Property::BITANGENT), true);
 		bim::sendMessage(bim::MessageType::INFO, "building BVH...");
 		t0 = high_resolution_clock::now();
-		model.getChunk(ei::IVec3(0))->buildHierarchy(method, 2);
+		model.getChunk(ei::IVec3(0))->buildHierarchy(method, maxNumTrianglesPerLeaf);
 		t1 = high_resolution_clock::now();
 		bim::sendMessage(bim::MessageType::INFO, "Finished BVH structure in ", duration_cast<duration<float>>(t1-t0).count(), " s\n",
 				"    Max. tree depth: ", model.getChunk(ei::IVec3(0))->getNumTreeLevels());

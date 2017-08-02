@@ -52,13 +52,11 @@ namespace bim {
 	{
 		ei::IVec3 numChunks;	// Number of stored chunks
 		ei::Box boundingBox;	// Entire scene bounding box
-		uint numTrianglesPerLeaf; // [DEPRECATED]
 	};
 
 	struct ChunkMetaSection
 	{
 		ei::Box boundingBox;
-		uint numTrianglesPerLeaf; // [DEPRECATED]
 		uint numTreeLevels;
 	};
 
@@ -116,7 +114,6 @@ namespace bim {
 			m_requestedProps = Property::Val(m_requestedProps | Property::AABOX_BVH);
 		m_optionalProperties = _optionalProperties;
 		m_numChunks = meta.numChunks;
-		m_maxNumTrianglesPerLeaf = meta.numTrianglesPerLeaf;
 		m_dimScale = ei::IVec3(1, m_numChunks.x, m_numChunks.x * m_numChunks.y);
 		m_boundingBox = meta.boundingBox;
 	
@@ -185,7 +182,6 @@ namespace bim {
 		refreshBoundingBox();
 		meta.numChunks = m_numChunks;
 		meta.boundingBox = m_boundingBox;
-		meta.numTrianglesPerLeaf = m_maxNumTrianglesPerLeaf;
 		file.write(reinterpret_cast<char*>(&meta), sizeof(MetaSection));
 
 		header.type = MATERIAL_REFERENCE;

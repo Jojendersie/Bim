@@ -87,9 +87,6 @@ namespace bim {
 		/// Allows an external update of the bounding box for out of core building purposes.
 		/// (Bounding box must be known in advance).
 		void setBoundingBox(const ei::Box& _box) { m_boundingBox = _box; }
-		/// Global parameter for the chunk->buildHierarchy().
-		void setMaxNumTrianglesPerLeaf(uint _numTrianglesPerLeaf) { m_maxNumTrianglesPerLeaf = _numTrianglesPerLeaf; }
-		uint getMaxNumTrianglesPerLeaf() const { return m_maxNumTrianglesPerLeaf; }
 
 		/// Returns the acceleration structure type as specified by the environment file.
 		/// \return One of AABOX_BVH, OBOX_BVH or SPHERE_BVH.
@@ -140,7 +137,6 @@ namespace bim {
 		Property::Val m_accelerator;	///< Chosen kind of acceleration structure (specified by environment file)
 		bool m_loadAll;					///< If a chunk is loaded, load all available data or only the required part
 		ei::Box m_boundingBox;
-		uint m_maxNumTrianglesPerLeaf;		///< [DEPRECATED-use a parameter in the build method] When the hierarchy is build the number of triangles per leaf node is set as parameter
 	};
 
 }

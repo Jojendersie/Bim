@@ -316,7 +316,7 @@ int main(int _numArgs, const char** _args)
 	bim::BinaryModel model(properties, chunkGridRes);
 	model.loadEnvironmentFile(outputJsonFile.c_str());
 	// TODO: argument
-	model.setNumTrianglesPerLeaf(2);
+	model.setMaxNumTrianglesPerLeaf(2);
 	// Fill the model with data
 	bim::sendMessage(bim::MessageType::INFO, "importing materials...");
 	importMaterials(importer.GetScene(), model);

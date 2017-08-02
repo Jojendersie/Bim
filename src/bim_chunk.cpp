@@ -226,7 +226,7 @@ namespace bim {
 
 	void Chunk::buildHierarchy(BuildMethod _method)
 	{
-		m_numTrianglesPerLeaf = m_parent->getNumTrianglesPerLeaf();
+		m_numTrianglesPerLeaf = m_parent->getMaxNumTrianglesPerLeaf();
 		switch(_method)
 		{
 		case BuildMethod::KD_TREE:

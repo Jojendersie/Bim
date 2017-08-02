@@ -116,7 +116,7 @@ namespace bim {
 			m_requestedProps = Property::Val(m_requestedProps | Property::AABOX_BVH);
 		m_optionalProperties = _optionalProperties;
 		m_numChunks = meta.numChunks;
-		m_numTrianglesPerLeaf = meta.numTrianglesPerLeaf;
+		m_maxNumTrianglesPerLeaf = meta.numTrianglesPerLeaf;
 		m_dimScale = ei::IVec3(1, m_numChunks.x, m_numChunks.x * m_numChunks.y);
 		m_boundingBox = meta.boundingBox;
 	
@@ -185,7 +185,7 @@ namespace bim {
 		refreshBoundingBox();
 		meta.numChunks = m_numChunks;
 		meta.boundingBox = m_boundingBox;
-		meta.numTrianglesPerLeaf = m_numTrianglesPerLeaf;
+		meta.numTrianglesPerLeaf = m_maxNumTrianglesPerLeaf;
 		file.write(reinterpret_cast<char*>(&meta), sizeof(MetaSection));
 
 		header.type = MATERIAL_REFERENCE;

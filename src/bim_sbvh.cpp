@@ -178,16 +178,17 @@ namespace bim {
 		{
 			// Allocate a new leaf
 			size_t leafIdx = _in.leaves.size();
-			_in.leaves.resize(_in.leaves.size() + _in.numTrianglesPerLeaf);
-			// Fill it
+			_in.leaves.resize(_in.leaves.size() + _num);
+			// Fill it, use a flag in the materials index to signal that there
+			// are more triangles following. If the flag is not set the current
+			// triangle is the last one.
 			UVec4* trianglesPtr = &_in.leaves[leafIdx];
-			for( uint i = 0; i < _num; ++i )
-				*(trianglesPtr++) = UVec4( _in.triangles[_triangles[i]], _in.materials.empty() ? 0 : _in.materials[_triangles[i]] );
-			for( uint i = 0; i < _in.numTrianglesPerLeaf - _num; ++i )
-				*(trianglesPtr++) = UVec4(0); // Invalid triangle per convention
+			for( uint i = 0; i < _num-1; ++i )
+				*(trianglesPtr++) = UVec4( _in.triangles[_triangles[i]], (_in.materials.empty() ? 0 : _in.materials[_triangles[i]]) | 0x10000000);
+			*(trianglesPtr) = UVec4(_in.triangles[_triangles[_num-1]], _in.materials.empty() ? 0 : _in.materials[_triangles[_num-1]]);
 
 			// Let the new node pointing to this leaf
-			_in.hierarchy[nodeIdx].firstChild = 0x80000000 | (uint32)(leafIdx / _in.numTrianglesPerLeaf);
+			_in.hierarchy[nodeIdx].firstChild = 0x80000000 | (uint32)(leafIdx);
 
 			return nodeIdx;
 		}
@@ -240,7 +241,7 @@ namespace bim {
 		// Reduce number of splittings with some special conditions:
 		// * only a few triangles
 		// * objSplit overlap is not too bad (TODO)
-		bool forceObjSplit = _num < _in.numTrianglesPerLeaf * 4
+		bool forceObjSplit = true//_num < _in.numTrianglesPerLeaf * 4
 			|| (surface(unionBox(optLeftBox, optRightBox)) / _in.rootSurface <= 2e-5f);
 
 		uint32 binSplitDim = 1000;

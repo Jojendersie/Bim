@@ -11,7 +11,7 @@ namespace bim {
 		m_requestedProps(Property::Val(_properties | Property::POSITION | Property::TRIANGLE_IDX)),
 		m_accelerator(Property::DONT_CARE),
 		m_loadAll(false),
-		m_numTrianglesPerLeaf(2)
+		m_maxNumTrianglesPerLeaf(2)
 	{
 		for(int i = 0; i < prod(m_numChunks); ++i)
 		{

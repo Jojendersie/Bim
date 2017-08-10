@@ -85,7 +85,7 @@ namespace bim {
 			irradiance(_irradiance)
 		{}
 
-		ei::Vec3 direction;
+		ei::Vec3 direction;		// Direction towards the light
 		ei::Vec3 irradiance;	// [lm / m^2]
 	};
 

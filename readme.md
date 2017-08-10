@@ -243,7 +243,7 @@ Light types are:
 
 `directional`:
 
-    direction
+    direction	   Direction towards the light
     irradiance     [lm / m^2]
 
 `spot`:

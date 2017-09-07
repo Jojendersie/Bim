@@ -27,15 +27,15 @@ An example for a JSON file looks as follows:
         "cameras": {
             "controlVelocity": 2.5 // Allows to change the movement speed in the scene for interaction
             <camname>: {
-				"type": "perspective",
+                "type": "perspective",
                 "scenario": ["stresstest"],
                 "position": [1.0, 2.0, 3.0],
                 "fov": 67.0,
                 "lookAt": [0.0, 0.0, 0.0],
-				"velocity": 2.5, // Factor for interactive movements
+                "velocity": 2.5, // Factor for interactive movements
             },
             <camname>: {
-				"type": "orthographic",
+                "type": "orthographic",
                 "scenario": ["baking"],
                 "direction": [0.0, 0.0, 1.0],
                 "position": [1.0, 2.0, 3.0],
@@ -47,7 +47,7 @@ An example for a JSON file looks as follows:
                 "far": 10.0,
             },
             <camname>: {
-				"type": "focus",
+                "type": "focus",
                 "scenario": ["day"],
                 "position": [1.0, 2.0, 3.0],
                 "lookAt": [0.0, 0.0, 0.0],
@@ -71,7 +71,7 @@ An example for a JSON file looks as follows:
         },
         "lights": {
             <lightname>: {
-				"type": "point",
+                "type": "point",
                 "position": [1, 2, 3],
                 "intensity": [10, 50, 10],
                 "scenario": ["day", "stresstest", ...]
@@ -202,24 +202,25 @@ There are several types of materials:
                     approximations) [0,1] (S)
                     To avoid any reflections scale down the specularColor.
     roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)    {0.5, 0.5, 0}
-	emissivity      Exitant radiant energy (RGB) [cd/m^2]                           {0, 0, 0}
-	
+    emissivity      Exitant radiant energy (RGB) [cd/m^2]                           {0, 0, 0}
+
 `transparent`: Material for glass, water, wine, ...
 
-	specularColor   A color for specular highlights. (RGB)                          {1.0, 1.0, 1.0}
-	roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)    {0.5, 0.5, 0}
-	reflectivity    Fresnel offset term F0.                                         {0.05}
-	optDensity		Absorption coefficient (RGB) and real refraction index N.       {0, 0, 0, 1.3}
+    specularColor   A color for specular highlights. (RGB)                          {1.0, 1.0, 1.0}
+    roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)    {0.5, 0.5, 0}
+    reflectivity    Fresnel offset term F0.                                         {0.05}
+    optDensity		Absorption coefficient (RGB) and real refraction index N.       {0, 0, 0, 1.3}
 
-`thinLayer`: a material for leaves and foils. If transmitted the render expects to be in free space again instead of inside a model.
+`thinLayer`: a material for leaves and foils. If transmitted the render expects to be in free space again instead of inside a model. To be plausible all % amounts must be add to at most 1.
 
-	backscatterColor   Procentual amount of back scattered light (if not reflected  {0.5, 0.5, 0.5}
-                       specular before).
-    transmittance      Procentual amount of transmitted light.                      {0.5, 0.5, 0.5}
-                       backscatterColor + transmittance <= 1!
-    roughnessUp        Surface roughness in normal direction. (S)                   {1.0}
-    roughnessDown      Surface roughness opposed to the normal. (S)                 {1.0}
-    scatteringStrength "Roughness" for transmitted light. (S)                       {1.0}
+    diffuseBackscatter    Lambertian diffuse into the direction of incident         {0.5, 0.5, 0.5, 1.0}
+                          light, alpha channel (RGBA)
+    diffuseForwardscatter Lambertian diffuse opposite to the incident light (RGB)   {0.2, 0.2, 0.2}
+    reflectivityUpDown    Fresnel offset term F0 for up and down. (SS)              {0.05, 0.05}
+    roughnessUpDown       Surface roughness in normal direction and opposed to the  {0.8, 0.8}
+                          normal. [0,1] (SS)
+    transmittance         %Amount (RGB), Henyey-Greenstein phase function with      {0.0, 0.0, 0.0, 1.0}
+                          shifted parameter [0,1] instead [-1,1] (S).
 
 where `(S)` is a scalar, `(RGB)` is an RGB color in [0,1]^3, `[]` note value intervals or units and `{x}` the default values.
 Every property is optional (its default is used if not given).
@@ -305,6 +306,7 @@ Currently there is one tool which uses the Assimp import library to convert almo
     -bOB                Build BVH with oriented boxes. It is possible to set
                         multiple -b options.
     -mSAH               Use BVH build method with surface area heuristic.
+    -mSBVH              Use SplitBVH build method with surface area heuristic.
     -mKD                Use BVH build method with axis aligned kd-tree.
     -cSGGX              Compute SGGX normal distributions for the nodes in the
                         hierarchy.

@@ -184,7 +184,7 @@ namespace bim {
 			// triangle is the last one.
 			UVec4* trianglesPtr = &_in.leaves[leafIdx];
 			for( uint i = 0; i < _num-1; ++i )
-				*(trianglesPtr++) = UVec4( _in.triangles[_triangles[i]], (_in.materials.empty() ? 0 : _in.materials[_triangles[i]]) | 0x10000000);
+				*(trianglesPtr++) = UVec4( _in.triangles[_triangles[i]], (_in.materials.empty() ? 0 : _in.materials[_triangles[i]]) | 0x80000000);
 			*(trianglesPtr) = UVec4(_in.triangles[_triangles[_num-1]], _in.materials.empty() ? 0 : _in.materials[_triangles[_num-1]]);
 
 			// Let the new node pointing to this leaf

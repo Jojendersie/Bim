@@ -17,7 +17,7 @@ namespace bim {
 			tri.v1 = _positions[_leaves[leafIdx].y];
 			tri.v2 = _positions[_leaves[leafIdx].z];
 			_aaBoxes[_node] = Box(tri);
-			while(_leaves[leafIdx].w & 0x10000000)
+			while(_leaves[leafIdx].w & 0x80000000)
 			{
 				leafIdx++;
 				tri.v0 = _positions[_leaves[leafIdx].x];
@@ -60,7 +60,7 @@ namespace bim {
 				_auxPos.push_back(_positions[_leaves[leafIdx].x]);
 				_auxPos.push_back(_positions[_leaves[leafIdx].y]);
 				_auxPos.push_back(_positions[_leaves[leafIdx].z]);
-			} while(_leaves[leafIdx++].w & 0x10000000);
+			} while(_leaves[leafIdx++].w & 0x80000000);
 		} else {
 			// Iterate through all siblings
 			computeBVHOBoxesRec(_positions, _leaves, _hierarchy, _parents, _auxPos, _oBoxes, child);
@@ -112,7 +112,7 @@ namespace bim {
 			nrm[n*3    ] = _normals[_leaf[n].x];
 			nrm[n*3 + 1] = _normals[_leaf[n].y];
 			nrm[n*3 + 2] = _normals[_leaf[n].z];
-		} while(_leaf[n++].w & 0x10000000);
+		} while(_leaf[n++].w & 0x80000000);
 
 		// Sample random normals from all triangles and compute spherical distribution variances.
 		Mat3x3 E(0.0f); // Expectations, later covariance matrix

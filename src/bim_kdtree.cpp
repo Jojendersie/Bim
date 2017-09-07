@@ -60,7 +60,7 @@ namespace bim {
 			// triangle is the last one.
 			UVec4* trianglesPtr = &_in.leaves[leafIdx];
 			for( uint i = _min; i < _max; ++i )
-				*(trianglesPtr++) = UVec4( _in.triangles[_in.sorted[0][i]], (_in.materials.empty() ? 0 : _in.materials[_in.sorted[0][i]]) | 0x10000000);
+				*(trianglesPtr++) = UVec4( _in.triangles[_in.sorted[0][i]], (_in.materials.empty() ? 0 : _in.materials[_in.sorted[0][i]]) | 0x80000000);
 			*(trianglesPtr++) = UVec4( _in.triangles[_in.sorted[0][_max]], _in.materials.empty() ? 0 : _in.materials[_in.sorted[0][_max]]);
 
 			// Let the new node pointing to this leaf

@@ -38,9 +38,8 @@ namespace bim {
 	
 	struct Node
 	{
-//		uint32 parent;		///< Index of the parent node
-		uint32 firstChild;	///< Index of the first child node
-		uint32 escape;		///< Index of the next element in a preorder traversal if children are skipped. This can be a sibling or some node on a higher level.
+		uint32 firstChild;	///< Index of the first child node. If the first bit is set this is a leaf index
+		uint32 escape;		///< Index of the next element in a preorder traversal if children are skipped. This can be a sibling or some node on a higher level or ~0 on the right spine.
 	};
 
 	/// A simplification of a node by SGGX base function.
@@ -193,7 +192,7 @@ namespace bim {
 		std::vector<uint32> m_triangleMaterials;
 		std::vector<Node> m_hierarchy;				///< Child and escape pointers. Defined if Property::HIERARCHY is available.
 		std::vector<uint32> m_hierarchyParents;		///< Indices of the parent nodes. Defined if Property::HIERARCHY is available.
-		std::vector<ei::UVec4> m_hierarchyLeaves;
+		std::vector<ei::UVec4> m_hierarchyLeaves;	///< 3 Vertex indices + 1 material index. The first bit of the material index is set if the next triangle in the list is part of the same leaf.
 		std::vector<ei::Box> m_aaBoxes;
 		std::vector<ei::OBox> m_oBoxes;
 		std::vector<SGGX> m_nodeNDFs;

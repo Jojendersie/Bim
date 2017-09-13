@@ -90,7 +90,7 @@ namespace bim {
 	};
 
 	// A spot light with the intensity distribution:
-	// I(t) = I0 * ((t - 1 + cos(halfAngle)) / cos(halfAngle))^falloff
+	// I(t) = I0 * (1 - clamp(1 - (t-cos(halfAngle)) / (1-cos(halfAngle)), 0, 1)^falloff)
 	// with t is dot(spot.direction, query.direction)
 	class SpotLight : public Light
 	{

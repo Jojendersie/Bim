@@ -252,7 +252,8 @@ Light types are:
     position
     direction
     peakIntensity or intensity [cd = lm / sr]
-    falloff
+    falloff       For x = dot(direction, toSurface) the attenuation is
+                  (1 - clamp(1 - (x-cos(halfAngle))/(1-cos(halfAngle)), 0, 1)^falloff) / distSq
     halfAngle
 
 `sky`:

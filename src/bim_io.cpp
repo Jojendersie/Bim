@@ -534,7 +534,7 @@ namespace bim {
 		ei::Vec3 position(0.0f);
 		ei::Vec3 intensity(10000.0f); // Also used as radiance or intensity scale
 		ei::Vec3 normal(0.0f, 1.0f, 0.0f); // Also used as light direction
-		float falloff = 0.1f;
+		float falloff = 10.0f;
 		float halfAngle = 0.7f;
 		float turbidity = 2.0f;
 		bool aerialPerspective = false;
@@ -568,6 +568,8 @@ namespace bim {
 			for(const auto& child : *it)
 				scenarios.push_back(child);
 		}
+
+		normal = normalize(normal);
 
 		switch(type)
 		{

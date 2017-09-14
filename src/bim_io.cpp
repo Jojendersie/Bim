@@ -451,6 +451,10 @@ namespace bim {
 		try {
 			envFile >> jsonRoot;
 
+			// Make sure that there is always a default scenario at the
+			// first place.
+			addScenario("default");
+
 			auto it = jsonRoot.find("materials");
 			if(it != jsonRoot.end())
 			{

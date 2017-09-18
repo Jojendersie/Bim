@@ -113,23 +113,23 @@ The different camera `type`s are:
                   Does not need to be normalized.
     up            Up orientation of the camera (not y axis)	 {0, 1, 0}
     left          Left clipping plane in view space.         {-1}
-	right         Right clipping plane in view space.        {1}
-	bottom        Bottom clipping plane in view space.       {-1}
-	top           Top clipping plane in view space.          {1}
-	near          Near clipping plane in view space.         {0}
-	far           Far clipping plane in view space.          {1e30}
+    right         Right clipping plane in view space.        {1}
+    bottom        Bottom clipping plane in view space.       {-1}
+    top           Top clipping plane in view space.          {1}
+    near          Near clipping plane in view space.         {0}
+    far           Far clipping plane in view space.          {1e30}
 
 `focus`: A perspective projection wich simulates DOF of a thin lens.
 
-	position      The position.                              {0, 0, 0}
-	lookAt        A position which is centered in the image. {0, 0, 1}
-	direction     Alternative to lookAt: a direction.        {0, 0, 1}
+    position      The position.                              {0, 0, 0}
+    lookAt        A position which is centered in the image. {0, 0, 1}
+    direction     Alternative to lookAt: a direction.        {0, 0, 1}
                   Does not need to be normalized.
     up            Up orientation of the camera (not y axis)	 {0, 1, 0}
-	focalLength   Focal length of the lens in [mm].          {20}
-	focusDistance Distance to the sharp plane in [m]         {1}
-	sensorSize    Vertical size of the sensor in [mm]        {24}
-	aperture      Aperture in f-stops (1.0, 1.4, ...)        {1.0}
+    focalLength   Focal length of the lens in [mm].          {20}
+    focusDistance Distance to the sharp plane in [m]         {1}
+    sensorSize    Vertical size of the sensor in [mm]        {24}
+    aperture      Aperture in f-stops (1.0, 1.4, ...)        {1.0}
 
 ### "sensor" ###
 Defines the image resolution and post processing.
@@ -195,8 +195,7 @@ There are several types of materials:
 
 `legacy`: Non-realistic model without energy preservation
 
-    albedo          Lambertian diffuse color (RGB)                                  {0.5, 0.5, 0.5, 1.0}
-                    May contain an opacity (alpha) channel.
+    albedo          Lambertian diffuse color (RGB)                                  {0.5, 0.5, 0.5}
     specularColor   A color for specular highlights. (RGB)                          {1.0, 1.0, 1.0}
     reflectivity    Isotropic amount of reflected light (offset term in Fresnel     {0.05}
                     approximations) [0,1] (S)
@@ -209,18 +208,18 @@ There are several types of materials:
     specularColor   A color for specular highlights. (RGB)                          {1.0, 1.0, 1.0}
     roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)    {0.5, 0.5, 0}
     reflectivity    Fresnel offset term F0.                                         {0.05}
-    optDensity		Absorption coefficient (RGB) and real refraction index N.       {0, 0, 0, 1.3}
+    optDensity      Absorption coefficient (RGB) and real refraction index N.       {0, 0, 0, 1.3}
 
-`thinLayer`: a material for leaves and foils. If transmitted the render expects to be in free space again instead of inside a model. To be plausible all % amounts must be add to at most 1.
+`thinLayer`: a material for leaves and foils. If transmitted the renderer expects to be in free space again instead of inside a model. To be plausible all % amounts must be add to at most 1.
 
-    diffuseBackscatter    Lambertian diffuse into the direction of incident         {0.5, 0.5, 0.5, 1.0}
-                          light, alpha channel (RGBA)
-    diffuseForwardscatter Lambertian diffuse opposite to the incident light (RGB)   {0.2, 0.2, 0.2}
+    diffuseUpAlpha        Lambertian diffuse into the direction of the normal       {0.5, 0.5, 0.5, 1.0}
+                          and alpha mask (test only, no transmission) (RGBA)
+    diffuseDown           Lambertian diffuse opposite to the normal (RGB)           {0.2, 0.2, 0.2}
     reflectivityUpDown    Fresnel offset term F0 for up and down. (SS)              {0.05, 0.05}
-    roughnessUpDown       Surface roughness in normal direction and opposed to the  {0.8, 0.8}
-                          normal. [0,1] (SS)
-    transmittance         %Amount (RGB), Henyey-Greenstein phase function with      {0.0, 0.0, 0.0, 1.0}
-                          shifted parameter [0,1] instead [-1,1] (S).
+    roughnessUpDownInner  Surface roughness in normal direction and opposed to the  {0.8, 0.8, 0.8}
+                          normal. [0,1] (SS),
+                          Henyey-Greenstein phase function [-1,1] (S).
+    transmittance         %Amount (RGB)                                             {0.0, 0.0, 0.0, 1.0}
 
 where `(S)` is a scalar, `(RGB)` is an RGB color in [0,1]^3, `[]` note value intervals or units and `{x}` the default values.
 Every property is optional (its default is used if not given).
@@ -271,7 +270,7 @@ Light types are:
 
 `environment`
 
-    radianceMap         A single .dds or .ktx texture containing a cube map (HDR: [cd/m^2]).
+    radianceMap     A single .dds or .ktx texture containing a cube map (HDR: [cd/m^2]).
 
 ## File Structure ##
 The binary file is stored in a classical chunk pattern (not to confuse with the scene chunks). A file-chunk starts with a header (4 byte type, 8 byte size value) followed by its data of the length given in the header's size value. A loaded may ignore entire chunks by simply skipping them.

@@ -33,10 +33,18 @@ namespace bim {
 	};
 
 	const uint NUM_BINS = 256;
+	const float SBVH_TRAVERSAL_COST = 3.0f;
 
-	static float surfaceAreaHeuristic(const Box& _bv, int _num)
+
+	static Box unionBox(const Box& _a, const Box& _b)
 	{
-		return surface(_bv) * _num;
+		return Box(max(_a.min, _b.min), min(_a.max, _b.max));
+	}
+
+	static float surfaceAreaHeuristic(const Box& _bparent, const Box& _bv, int _num)
+	{
+		return surface(unionBox(_bv, _bparent)) / surface(_bparent) * _num;
+		//return surface(unionBox(_bv, _bparent)) * _num;
 	}
 
 	// Two sources to derive the z-order comparator
@@ -118,9 +126,9 @@ namespace bim {
 		return Box(points, n);
 	}
 
-	static Box unionBox(const Box& _a, const Box& _b)
+	static float getTriangleArea(const UVec3 & _indices, const Vec3 * _vertices)
 	{
-		return Box(max(_a.min, _b.min), min(_a.max, _b.max));
+		return surface(Triangle(_vertices[_indices[0]], _vertices[_indices[1]], _vertices[_indices[2]]));
 	}
 
 
@@ -132,22 +140,26 @@ namespace bim {
 		// Compute lhs/rhs bounding volumes for all splits. This is done from left
 		// and right adding one triangle at a time.
 		UVec3 t = _in.triangles[_triangles[0]];
-		Box leftBox = Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]));
+		Triangle tri = Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]);
+		Box leftBox = Box(tri);
 		t = _in.triangles[_triangles[_num-1]];
-		Box rightBox = Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]));
-		_in.heuristics[0].x   = surfaceAreaHeuristic( unionBox(_parentBox, leftBox), 1 );
-		_in.heuristics[_num-2].y = surfaceAreaHeuristic( unionBox(_parentBox, rightBox), 1 );
+		tri = Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]);
+		Box rightBox = Box(tri);
+		_in.heuristics[0].x   = surfaceAreaHeuristic( _parentBox, leftBox, 1 );
+		_in.heuristics[_num-2].y = surfaceAreaHeuristic( _parentBox, rightBox, 1 );
 		for(uint32 i = 1; i < _num-1; ++i)
 		{
 			// Extend bounding boxes by one triangle
 			t = _in.triangles[_triangles[i]];
-			leftBox = Box(leftBox, Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z])));
+			tri = Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]);
+			leftBox = Box(leftBox, Box(tri));
 			t = _in.triangles[_triangles[_num-i-1]];
-			rightBox = Box(rightBox, Box(Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z])));
+			tri = Triangle(_in.positions[t.x], _in.positions[t.y], _in.positions[t.z]);
+			rightBox = Box(rightBox, Box(tri));
 			// The volumes are rejected in the next iteration but remember
 			// the result for the split decision.
-			_in.heuristics[i].x   = surfaceAreaHeuristic( unionBox(_parentBox, leftBox), i+1 );
-			_in.heuristics[_num-i-2].y = surfaceAreaHeuristic( unionBox(_parentBox, rightBox), i+1 );
+			_in.heuristics[i].x   = surfaceAreaHeuristic( _parentBox, leftBox, i+1 );
+			_in.heuristics[_num-i-2].y = surfaceAreaHeuristic( _parentBox, rightBox, i+1 );
 		}
 
 		// Find the minimum for the current dimension
@@ -165,8 +177,31 @@ namespace bim {
 		return minCost;
 	}
 
+
+	static uint32 makeLeaf( SBVBuildInfo& _in, uint32* _triangles, uint32 _num )
+	{
+		uint32 nodeIdx = (uint32)_in.hierarchy.size()-1;
+		// Allocate a new leaf
+		size_t leafIdx = _in.leaves.size();
+		_in.leaves.resize(_in.leaves.size() + _num);
+		// Fill it, use a flag in the materials index to signal that there
+		// are more triangles following. If the flag is not set the current
+		// triangle is the last one.
+		UVec4* trianglesPtr = &_in.leaves[leafIdx];
+		for( uint i = 0; i < _num-1; ++i )
+			*(trianglesPtr++) = UVec4( _in.triangles[_triangles[i]], (_in.materials.empty() ? 0 : _in.materials[_triangles[i]]) | 0x80000000);
+		*(trianglesPtr) = UVec4(_in.triangles[_triangles[_num-1]], _in.materials.empty() ? 0 : _in.materials[_triangles[_num-1]]);
+
+		// Let the new node pointing to this leaf
+		_in.hierarchy[nodeIdx].firstChild = 0x80000000 | (uint32)(leafIdx);
+
+		return nodeIdx;
+	}
+
 	static uint32 build( SBVBuildInfo& _in, uint32* _triangles, uint32 _num, const Box& _aab )
 	{
+		eiAssert(_num > 0, "Node without triangles!");
+
 		uint32 nodeIdx = (uint32)_in.hierarchy.size();
 		_in.hierarchy.resize(nodeIdx + 1);
 		_in.parents.resize(nodeIdx + 1);
@@ -174,25 +209,8 @@ namespace bim {
 		_in.aaBoxes.push_back(_aab);
 
 		// Create a leaf if less than NUM_PRIMITIVES elements remain.
-		eiAssert(_num > 0, "Node without triangles!");
 		if( _num <= _in.numTrianglesPerLeaf )
-		{
-			// Allocate a new leaf
-			size_t leafIdx = _in.leaves.size();
-			_in.leaves.resize(_in.leaves.size() + _num);
-			// Fill it, use a flag in the materials index to signal that there
-			// are more triangles following. If the flag is not set the current
-			// triangle is the last one.
-			UVec4* trianglesPtr = &_in.leaves[leafIdx];
-			for( uint i = 0; i < _num-1; ++i )
-				*(trianglesPtr++) = UVec4( _in.triangles[_triangles[i]], (_in.materials.empty() ? 0 : _in.materials[_triangles[i]]) | 0x80000000);
-			*(trianglesPtr) = UVec4(_in.triangles[_triangles[_num-1]], _in.materials.empty() ? 0 : _in.materials[_triangles[_num-1]]);
-
-			// Let the new node pointing to this leaf
-			_in.hierarchy[nodeIdx].firstChild = 0x80000000 | (uint32)(leafIdx);
-
-			return nodeIdx;
-		}
+			return makeLeaf(_in, _triangles, _num);//*/
 
 		// Find SAH object split candidate.
 		uint32 splitIndex = 0; // Last triangle of left set
@@ -244,6 +262,7 @@ namespace bim {
 		// * objSplit overlap is not too bad (TODO)
 		bool forceObjSplit = _num < _in.numTrianglesPerLeaf * 3
 			|| (surface(unionBox(optLeftBox, optRightBox)) / _in.rootSurface <= 1e-4f);
+		forceObjSplit = true; // TODO: currently disabled splitting due to SAH refactoring
 
 		uint32 binSplitDim = 1000;
 		float binSplitPlane = 0.0f;
@@ -302,8 +321,8 @@ namespace bim {
 			Box rightBox = _in.bins[NUM_BINS-1].bbox;
 			uint32 numLeft = _in.bins[0].numStart;
 			uint32 numRight = _in.bins[NUM_BINS-1].numEnd;
-			_in.heuristics[0].x			 = surfaceAreaHeuristic( leftBox, numLeft );
-			_in.heuristics[NUM_BINS-2].y = surfaceAreaHeuristic( rightBox, numRight );
+			_in.heuristics[0].x			 = surfaceAreaHeuristic( _aab, leftBox, numLeft );
+			_in.heuristics[NUM_BINS-2].y = surfaceAreaHeuristic( _aab, rightBox, numRight );
 			// Use aux to track the total number of references through the splitting
 			for(uint i = 0; i < NUM_BINS; ++i) _in.aux[i] = 0;
 			_in.aux[0] = numLeft;
@@ -314,8 +333,8 @@ namespace bim {
 				rightBox = Box(rightBox, _in.bins[NUM_BINS-i-1].bbox);
 				numLeft += _in.bins[i].numStart;
 				numRight += _in.bins[NUM_BINS-i-1].numEnd;
-				_in.heuristics[i].x = numLeft < _num ? surfaceAreaHeuristic( leftBox, numLeft ) : INF;
-				_in.heuristics[NUM_BINS-i-2].y = numRight < _num ? surfaceAreaHeuristic( rightBox, numRight ) : INF;
+				_in.heuristics[i].x = numLeft < _num ? surfaceAreaHeuristic( _aab, leftBox, numLeft ) : INF;
+				_in.heuristics[NUM_BINS-i-2].y = numRight < _num ? surfaceAreaHeuristic( _aab, rightBox, numRight ) : INF;
 				_in.aux[i] += numLeft;
 				_in.aux[NUM_BINS-i-2] += numRight;
 			}
@@ -346,6 +365,11 @@ namespace bim {
 				eiAssert(optLeftBox.min != optRightBox.min || optLeftBox.max != optRightBox.max, "Spatial split must divide the space.");
 			}
 		}
+
+		// Create a leaf node based on the cost
+		//if(leafSAH < objSplitSAH && leafSAH < binSplitSAH)
+		/*if(_num < SBVH_TRAVERSAL_COST + min(objSplitSAH, binSplitSAH))
+			return makeLeaf(_in, _triangles, _num);//*/
 
 		bool useObjSplit = objSplitSAH <= binSplitSAH;
 

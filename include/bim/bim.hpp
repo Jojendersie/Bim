@@ -109,6 +109,8 @@ namespace bim {
 		std::shared_ptr<Light> getLight(const std::string& _name);
 		std::shared_ptr<const Light> getLight(const std::string& _name) const { return const_cast<BinaryModel*>(this)->getLight(_name); }
 		void addLight(std::shared_ptr<Light> _light);
+
+		void addCamera(std::shared_ptr<Camera> _camera);
 	private:
 		std::string loadEnv(const char* _envFile, bool _ignoreBinary);
 		void loadMaterial(const Json& _node, const std::string& _name);

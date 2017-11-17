@@ -106,4 +106,9 @@ namespace bim {
 		m_lights.push_back(_light);
 	}
 
+	void BinaryModel::addCamera(std::shared_ptr<Camera> _camera)
+	{
+		m_cameras.push_back(_camera);
+	}
+
 } // namespace bim

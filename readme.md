@@ -205,9 +205,8 @@ There are several types of materials:
 
 `transparent`: Material for glass, water, wine, ...
 
-    specularColor   A color for specular highlights. (RGB)                          {1.0, 1.0, 1.0}
     roughness       Surface roughness in [0,1], can be anisotropic (S, S, angle)    {0.5, 0.5, 0}
-    reflectivity    Fresnel offset term F0.                                         {0.05}
+    reflectivity    Fresnel offset term F0 (RGB).                                   {0.05, 0.05, 0.05}
     optDensity      Absorption coefficient (RGB) and real refraction index N.       {0, 0, 0, 1.3}
 
 `thinLayer`: a material for leaves and foils. If transmitted the renderer expects to be in free space again instead of inside a model. To be plausible all % amounts must be add to at most 1.

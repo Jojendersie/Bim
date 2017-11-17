@@ -365,6 +365,18 @@ int main(int _numArgs, const char** _args)
 	if(computeOB) model.setAccelerator(bim::Property::OBOX_BVH);
 	if(computeAAB) model.setAccelerator(bim::Property::AABOX_BVH);
 
+	// Add some default paramaters
+	if(model.getNumScenarios() == 0)
+	{
+		auto scenario = model.addScenario("default");
+		auto light = std::make_shared<bim::PointLight>(ei::Vec3(0.5f, 1.5f, 0.0f), ei::Vec3(2.0f), "defaultPL");
+		auto cam = std::make_shared<bim::PerspectiveCamera>(ei::Vec3(0.0f, 0.5f, -1.0f), ei::Vec3(0.0f), ei::Vec3(0.0f, 1.0f, 0.0f), 0.5f, "defaultCam");
+		model.addLight(light);
+		model.addCamera(cam);
+		scenario->addLight(light);
+		scenario->setCamera(cam);
+	}
+
 	bim::sendMessage(bim::MessageType::INFO, "storing model...");
 	model.storeEnvironmentFile(outputJsonFile.c_str(), outputBimFile.c_str());
 	model.storeBinaryHeader(outputBimFile.c_str());

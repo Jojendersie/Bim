@@ -95,6 +95,7 @@ namespace bim {
 		uint getNumNodes() const					{ return (uint)m_hierarchy.size(); }
 		uint getNumTreeLevels() const				{ return m_numTreeLevels; }
 		uint getNumLeaves() const					{ return (uint)(m_hierarchyLeaves.size()); }
+		const ei::Box & getBoundingBox() const		{ return m_boundingBox; }
 		Node* getHierarchy()						{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
 		const Node* getHierarchy() const			{ return m_hierarchy.empty() ? nullptr : m_hierarchy.data(); }
 		uint32* getHierarchyParents()				{ return m_hierarchyParents.empty() ? nullptr : m_hierarchyParents.data(); }

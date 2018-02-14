@@ -157,9 +157,9 @@ namespace bim {
 			{
 				Vec3 bary = cn::barycentric(haltonSeq);
 				Vec3 normal = normalize(nrm[i*3] * bary.x + nrm[i*3+1] * bary.y + nrm[i*3+1] * bary.z);
-				λ[0] += abs(Q(0) * normal);
-				λ[1] += abs(Q(1) * normal);
-				λ[2] += abs(Q(2) * normal);
+				λ[0] += ei::abs(Q(0) * normal);
+				λ[1] += ei::abs(Q(1) * normal);
+				λ[2] += ei::abs(Q(2) * normal);
 			}
 		}
 		λ /= nTotalSamples;// TODO: /4π ?

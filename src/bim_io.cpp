@@ -646,6 +646,7 @@ namespace bim {
 
 		if((it = _node.find("position")) != _node.end()) position = readVec3(*it);
 		if((it = _node.find("lookAt")) != _node.end()) lookAt = readVec3(*it);
+		if((it = _node.find("viewDir")) != _node.end()) lookAt = position + readVec3(*it);
 		if((it = _node.find("up")) != _node.end()) up = readVec3(*it);
 		if((it = _node.find("fov")) != _node.end()) fieldOfView = *it;
 		if((it = _node.find("left")) != _node.end()) left = *it;
